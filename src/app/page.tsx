@@ -2,9 +2,10 @@ import Image from 'next/image';
 import { CandidaturaForm } from '@/components/CandidaturaForm';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { listJobs } from '@/lib/supabase';
+import { JobOption } from '@/types/candidatura';
 
 export default async function HomePage() {
-  let jobs = [];
+  let jobs: JobOption[] = [];
   let errorMessage = '';
 
   try {
