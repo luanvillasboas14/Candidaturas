@@ -107,12 +107,13 @@ export function CandidaturaForm({ jobs }: CandidaturaFormProps) {
   const isLoading = status === 'loading';
 
   return (
-    <form onSubmit={handleSubmit} className="form">
+    <form onSubmit={handleSubmit} className="form" autoComplete="off">
       <div className="field">
         <label htmlFor="telefone">Telefone do candidato</label>
         <input
           id="telefone"
           type="tel"
+          autoComplete="off"
           value={telefone}
           onChange={(e) => setTelefone(e.target.value)}
           placeholder="5511999999999"
@@ -128,6 +129,7 @@ export function CandidaturaForm({ jobs }: CandidaturaFormProps) {
           <input
             id="vaga"
             type="text"
+            autoComplete="off"
             value={selectedJob ? `${selectedJob.title} — ${selectedJob.company}` : jobSearch}
             onChange={(e) => {
               setJobSearch(e.target.value);
