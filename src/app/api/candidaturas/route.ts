@@ -68,12 +68,14 @@ export async function POST(request: Request): Promise<NextResponse<CandidaturaRe
       vaga_endereco: vagaEndereco,
     });
 
+    const otherCount = await countOtherCandidaturas(telefoneNormalizado, jobId);
+
     await notifyN8N({
       ...candidatura,
       contact_name: contact?.name || null,
+      total_candidaturas: otherCount + 1,
+      outras_candidaturas: otherCount,
     });
-
-    const otherCount = await countOtherCandidaturas(telefoneNormalizado, jobId);
 
     return NextResponse.json(
       {
