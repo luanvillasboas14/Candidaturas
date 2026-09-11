@@ -34,7 +34,7 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - `SUPABASE_SERVICE_ROLE_KEY`
 
 ## Deploy
-- O GitHub Actions (`.github/workflows/deploy.yml`) só roda quando alguém dispara manualmente (`workflow_dispatch`). Não dispara no push. Aí constrói a imagem e publica em `ghcr.io/luanvillasboas14/candidaturas`.
+- O GitHub Actions (`.github/workflows/deploy.yml`) constrói a imagem Docker no push para `main` e publica em `ghcr.io/luanvillasboas14/candidaturas`.
 - O EasyPanel deve usar source **Docker Image** e puxar `ghcr.io/luanvillasboas14/candidaturas:latest` (sem Nixpacks).
 - Porta **3000**. O comando de start no EasyPanel deve ficar vazio (usa o entrypoint da imagem). Não deixar `npm start` da época do Nixpacks.
 - O `docker-entrypoint.sh` força `HOSTNAME=0.0.0.0` e sobe `node /app/server.js`. Sem isso o Next standalone tenta escutar o hostname do container e o processo cai.
