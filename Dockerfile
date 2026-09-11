@@ -23,9 +23,12 @@ RUN addgroup --system --gid 1001 nodejs \
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
-RUN chmod +x ./docker-entrypoint.sh
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh \
+  && chmod +x /app/docker-entrypoint.sh \
+  && node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('/app/package.json','utf8')); p.scripts=Object.assign({}, p.scripts, {start:'HOSTNAME=0.0.0.0 node /app/server.js'}); fs.writeFileSync('/app/package.json', JSON.stringify(p,null,2));" \
+  && chown nextjs:nodejs /app/docker-entrypoint.sh /app/package.json
 
 USER nextjs
 EXPOSE 3000
-ENTRYPOINT ["/bin/sh", "./docker-entrypoint.sh"]
+ENTRYPOINT ["/bin/sh", "/app/docker-entrypoint.sh"]
