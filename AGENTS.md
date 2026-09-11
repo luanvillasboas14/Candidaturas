@@ -32,6 +32,11 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+## Deploy
+- O GitHub Actions (`.github/workflows/deploy.yml`) constrói a imagem Docker no push para `main` e publica em `ghcr.io/luanvillasboas14/candidaturas`.
+- O EasyPanel deve usar source **Docker Image** e puxar `ghcr.io/luanvillasboas14/candidaturas:latest` (sem Nixpacks).
+- No GitHub, o único secret necessário é `EASYPANEL_DEPLOY_WEBHOOK`. As variáveis de ambiente do app ficam só no EasyPanel.
+
 ## Estrutura de pastas
 - `src/app/api/candidaturas/route.ts` — API de criação de candidatura.
 - `src/app/api/vagas-proximas/route.ts` — API de busca de vagas por CEP e raio.
@@ -41,6 +46,7 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - `src/components/CandidaturaForm.tsx` — formulário interativo.
 - `src/components/VagasProximasForm.tsx` — formulário de CEP e raio.
 - `src/lib/geo.ts` — geocodificação de CEP/endereço e cálculo de distância.
+- `src/lib/env.ts` — leitura de variáveis de ambiente em runtime.
 - `src/lib/phone.ts` — normalização de telefone.
 - `src/lib/supabase.ts` — cliente Supabase anon + busca de vagas.
 - `src/lib/supabase-server.ts` — cliente Supabase service role + INSERT de candidatura.

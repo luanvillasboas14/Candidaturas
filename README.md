@@ -33,6 +33,15 @@ Sistema interno para registrar candidaturas de candidatos a vagas do DNA Work.
 - A aba lateral navega entre Candidaturas e Vagas próximas.
 - Em Vagas próximas, o atendente informa o CEP e o raio; o sistema localiza o CEP e usa latitude/longitude da tabela `jobs_enriched` para listar as vagas dentro do raio, da mais próxima para a mais distante.
 
+## Deploy (GitHub + EasyPanel)
+O GitHub constrói a imagem e o EasyPanel só puxa. Isso deixa o deploy bem mais rápido.
+
+1. No GitHub: Settings → Secrets and variables → Actions → Secrets, criar `EASYPANEL_DEPLOY_WEBHOOK` com a Deployment Trigger URL do EasyPanel.
+2. No EasyPanel, mudar o source do serviço para **Docker Image**:
+   - Imagem: `ghcr.io/luanvillasboas14/candidaturas:latest`
+   - Porta: `3000`
+3. Manter as variáveis de ambiente no EasyPanel (Supabase, CRM DNA).
+
 ## Arquivos principais
 - `src/app/page.tsx` — tela de criação
 - `src/app/api/candidaturas/route.ts` — API de criação

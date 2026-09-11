@@ -1,5 +1,11 @@
-const CRM_API_URL = process.env.CRM_DNA_API_URL || '';
-const CRM_API_TOKEN = process.env.CRM_DNA_API_TOKEN || '';
+import { readEnv } from './env';
+
+function getCrmConfig() {
+  return {
+    url: readEnv('CRM_DNA_API_URL'),
+    token: readEnv('CRM_DNA_API_TOKEN'),
+  };
+}
 
 interface CrmContact {
   id: string;
@@ -23,19 +29,21 @@ export interface ContactInfo {
  * Retorna o contact_id e o nome se encontrar, ou null se não existir.
  */
 export async function findContactByPhone(phone: string): Promise<ContactInfo | null> {
-  if (!CRM_API_URL || !CRM_API_TOKEN) {
+  const { url: crmUrl, token } = getCrmConfig();
+
+  if (!crmUrl || !token) {
     console.warn('CRM_DNA_API_URL ou CRM_DNA_API_TOKEN não configurados.');
     return null;
   }
 
   try {
-    const url = new URL(`${CRM_API_URL}/api/contacts`);
+    const url = new URL(`${crmUrl}/api/contacts`);
     url.searchParams.set('phone', phone);
 
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${CRM_API_TOKEN}`,
+        Authorization: `Bearer ${token}`,
       },
     });
 

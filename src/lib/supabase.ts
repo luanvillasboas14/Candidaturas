@@ -1,14 +1,24 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { JobOption } from '@/types/candidatura';
+import { readEnv } from './env';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+let supabaseClient: SupabaseClient | null = null;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase URL e anon key devem estar configurados.');
+function getSupabase(): SupabaseClient {
+  if (supabaseClient) {
+    return supabaseClient;
+  }
+
+  const supabaseUrl = readEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const supabaseAnonKey = readEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase URL e anon key devem estar configurados.');
+  }
+
+  supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+  return supabaseClient;
 }
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export interface JobGeo {
   id: string;
@@ -20,7 +30,7 @@ export interface JobGeo {
 }
 
 export async function listJobs(): Promise<JobOption[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('jobs')
     .select('id, title, company_name, location, city, state');
 
@@ -37,7 +47,7 @@ export async function listJobs(): Promise<JobOption[]> {
 }
 
 export async function listActiveJobsForGeo(): Promise<JobGeo[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('jobs_enriched')
     .select('id, source_job_id, title, company_name, location, city, state, latitude, longitude')
     .not('latitude', 'is', null)
