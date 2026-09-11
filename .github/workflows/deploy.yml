@@ -44,7 +44,11 @@ jobs:
             org.opencontainers.image.source=https://github.com/luanvillasboas14/Candidaturas
 
       - name: Trigger EasyPanel deploy
-        if: ${{ secrets.EASYPANEL_DEPLOY_WEBHOOK != '' }}
         env:
           WEBHOOK: ${{ secrets.EASYPANEL_DEPLOY_WEBHOOK }}
-        run: curl -fsS -X POST "$WEBHOOK"
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "EASYPANEL_DEPLOY_WEBHOOK nao configurado, pulando trigger."
+            exit 0
+          fi
+          curl -fsS -X POST "$WEBHOOK"
