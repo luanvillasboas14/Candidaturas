@@ -33,10 +33,15 @@ export interface JobOption {
   location: string;
 }
 
+export type JobContractType = 'CLT' | 'Estágio';
+
 export interface NearbyJob {
   id: string;
   title: string;
   company: string;
   location: string;
+  contractType: JobContractType;
+  salaryLabel: string;
+  hasBenefits: boolean;
   distanceKm: number;
 }

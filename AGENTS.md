@@ -26,7 +26,7 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - Após o INSERT bem-sucedido, o backend chama o webhook n8n `https://dnaworkia-n8n.vkfaze.easypanel.host/webhook/criacaocandidaturas` (POST) com os dados da candidatura + `contact_name` do CRM DNA + `total_candidaturas` (total do telefone, incluindo a atual) + `outras_candidaturas` (em outras vagas). Se o INSERT falhar, o webhook não é chamado.
 - A aba lateral navega entre Vagas próximas (`/`) e Candidaturas (`/candidaturas`). A home abre em Vagas próximas.
 - `GET /api/vagas` devolve a lista da tabela `jobs` para o formulário de candidatura.
-- `POST /api/vagas-proximas` recebe `cep` e `raioKm`, geocodifica o CEP (BrasilAPI) e usa `latitude`/`longitude` da tabela `jobs_enriched` para filtrar pelo raio e devolver as vagas da mais próxima para a mais distante.
+- `POST /api/vagas-proximas` recebe `cep`, `raioKm` e `tipos` (`CLT` e/ou `Estágio`), geocodifica o CEP (BrasilAPI) e usa `latitude`/`longitude` da tabela `jobs_enriched` para filtrar pelo raio. Vagas iguais (mesmo título, empresa, local e tipo) entram uma vez só, ficando a mais próxima. O texto para o candidato usa endereço e salário (0 = salário a combinar; com benefícios = salário + benefícios), sem distância.
 
 ## Variáveis de ambiente obrigatórias
 - `NEXT_PUBLIC_SUPABASE_URL`

@@ -25,6 +25,11 @@ export interface JobGeo {
   title: string;
   company: string;
   location: string;
+  contractType: string;
+  salaryMin: number;
+  salaryMax: number;
+  salaryRange: string;
+  benefits: string;
   latitude: number;
   longitude: number;
 }
@@ -49,7 +54,7 @@ export async function listJobs(): Promise<JobOption[]> {
 export async function listActiveJobsForGeo(): Promise<JobGeo[]> {
   const { data, error } = await getSupabase()
     .from('jobs_enriched')
-    .select('id, source_job_id, title, company_name, location, city, state, latitude, longitude')
+    .select('id, source_job_id, title, company_name, location, city, state, contract_type, salary_min, salary_max, salary_range, benefits, latitude, longitude')
     .not('latitude', 'is', null)
     .not('longitude', 'is', null);
 
@@ -62,6 +67,11 @@ export async function listActiveJobsForGeo(): Promise<JobGeo[]> {
     title: job.title || 'Vaga sem título',
     company: job.company_name || 'Empresa não informada',
     location: job.location || `${job.city || ''} ${job.state || ''}`.trim() || 'Local não informado',
+    contractType: typeof job.contract_type === 'string' ? job.contract_type : '',
+    salaryMin: Number(job.salary_min) || 0,
+    salaryMax: Number(job.salary_max) || 0,
+    salaryRange: typeof job.salary_range === 'string' ? job.salary_range.trim() : '',
+    benefits: typeof job.benefits === 'string' ? job.benefits.trim() : '',
     latitude: Number(job.latitude),
     longitude: Number(job.longitude),
   })).filter((job) => Number.isFinite(job.latitude) && Number.isFinite(job.longitude));

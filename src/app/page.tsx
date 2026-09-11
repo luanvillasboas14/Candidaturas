@@ -3,10 +3,10 @@ import { VagasProximasForm } from '@/components/VagasProximasForm';
 export default function HomePage() {
   return (
     <main className="container">
-      <div className="card card-wide">
+      <div className="card card-wide nearby-page">
         <h1>Vagas próximas</h1>
         <p className="subtitle">
-          Informe o CEP da pessoa e o raio para listar as vagas mais próximas.
+          Informe o CEP, o raio e o tipo de vaga. Depois selecione o que vai no texto para o candidato.
         </p>
         <VagasProximasForm />
       </div>
