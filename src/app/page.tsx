@@ -1,30 +1,14 @@
-import { CandidaturaForm } from '@/components/CandidaturaForm';
-import { listJobs } from '@/lib/supabase';
-import { JobOption } from '@/types/candidatura';
+import { VagasProximasForm } from '@/components/VagasProximasForm';
 
-export default async function HomePage() {
-  let jobs: JobOption[] = [];
-  let errorMessage = '';
-
-  try {
-    jobs = await listJobs();
-  } catch (error) {
-    errorMessage = 'Não foi possível carregar as vagas no momento.';
-  }
-
+export default function HomePage() {
   return (
     <main className="container">
-      <div className="card">
-        <h1>Nova candidatura</h1>
+      <div className="card card-wide">
+        <h1>Vagas próximas</h1>
         <p className="subtitle">
-          Registre o interesse de um candidato em uma vaga.
+          Informe o CEP da pessoa e o raio para listar as vagas mais próximas.
         </p>
-
-        {errorMessage ? (
-          <div className="message error">{errorMessage}</div>
-        ) : (
-          <CandidaturaForm jobs={jobs} />
-        )}
+        <VagasProximasForm />
       </div>
     </main>
   );

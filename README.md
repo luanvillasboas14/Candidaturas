@@ -43,7 +43,8 @@ O GitHub constrói a imagem e o EasyPanel só puxa. Isso deixa o deploy bem mais
 3. Manter as variáveis de ambiente no EasyPanel (Supabase, CRM DNA).
 
 ## Arquivos principais
-- `src/app/page.tsx` — tela de criação
+- `src/app/page.tsx` — tela de vagas próximas
+- `src/app/candidaturas/page.tsx` — tela de criação
 - `src/app/api/candidaturas/route.ts` — API de criação
 - `src/components/CandidaturaForm.tsx` — formulário
 - `src/lib/phone.ts` — normalização de telefone

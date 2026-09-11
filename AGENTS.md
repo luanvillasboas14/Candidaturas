@@ -24,7 +24,7 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - Quando uma candidatura é criada com sucesso, a API retorna `hasOtherCandidaturas` e `otherCandidaturasCount` para informar se o mesmo telefone já possui candidaturas em outras vagas.
 - Antes do INSERT, o backend busca o `contact_id` no CRM DNA pelo telefone normalizado usando `GET /api/contacts?phone=...` com Bearer token `CRM_DNA_API_TOKEN`. Se não encontrar, o campo fica `null`.
 - Após o INSERT bem-sucedido, o backend chama o webhook n8n `https://dnaworkia-n8n.vkfaze.easypanel.host/webhook/criacaocandidaturas` (POST) com os dados da candidatura + `contact_name` do CRM DNA + `total_candidaturas` (total do telefone, incluindo a atual) + `outras_candidaturas` (em outras vagas). Se o INSERT falhar, o webhook não é chamado.
-- A aba lateral navega entre Candidaturas (`/`) e Vagas próximas (`/vagas-proximas`).
+- A aba lateral navega entre Vagas próximas (`/`) e Candidaturas (`/candidaturas`). A home abre em Vagas próximas.
 - `POST /api/vagas-proximas` recebe `cep` e `raioKm`, geocodifica o CEP (BrasilAPI) e usa `latitude`/`longitude` da tabela `jobs_enriched` para filtrar pelo raio e devolver as vagas da mais próxima para a mais distante.
 
 ## Variáveis de ambiente obrigatórias
@@ -40,8 +40,8 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 ## Estrutura de pastas
 - `src/app/api/candidaturas/route.ts` — API de criação de candidatura.
 - `src/app/api/vagas-proximas/route.ts` — API de busca de vagas por CEP e raio.
-- `src/app/page.tsx` — página de criação.
-- `src/app/vagas-proximas/page.tsx` — página de vagas próximas.
+- `src/app/page.tsx` — página inicial de vagas próximas.
+- `src/app/candidaturas/page.tsx` — página de criação de candidatura.
 - `src/components/AppShell.tsx` — aba lateral com navegação.
 - `src/components/CandidaturaForm.tsx` — formulário interativo.
 - `src/components/VagasProximasForm.tsx` — formulário de CEP e raio.

@@ -6,8 +6,8 @@ import { usePathname } from 'next/navigation';
 import { ThemeToggle } from './ThemeToggle';
 
 const NAV_ITEMS = [
-  { href: '/vagas-proximas', label: 'Vagas próximas' },
-  { href: '/', label: 'Candidaturas' },
+  { href: '/', label: 'Vagas próximas' },
+  { href: '/candidaturas', label: 'Candidaturas' },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
