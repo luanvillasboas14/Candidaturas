@@ -9,6 +9,7 @@ export default async function CandidaturasPage() {
   try {
     jobs = await listJobs();
   } catch (error) {
+    console.error('Erro ao carregar vagas:', error);
     errorMessage = 'Não foi possível carregar as vagas no momento.';
   }
 
