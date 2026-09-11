@@ -36,6 +36,7 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 ## Deploy
 - O GitHub Actions (`.github/workflows/deploy.yml`) constrói a imagem Docker no push para `main` e publica em `ghcr.io/luanvillasboas14/candidaturas`.
 - O EasyPanel deve usar source **Docker Image** e puxar `ghcr.io/luanvillasboas14/candidaturas:latest` (sem Nixpacks).
+- O `docker-entrypoint.sh` força `HOSTNAME=0.0.0.0` na subida. Sem isso o Next standalone tenta escutar o hostname do container e o processo cai.
 - No GitHub, o único secret necessário é `EASYPANEL_DEPLOY_WEBHOOK`. As variáveis de ambiente do app ficam só no EasyPanel.
 
 ## Estrutura de pastas
