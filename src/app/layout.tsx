@@ -1,6 +1,7 @@
 import React from 'react';
 import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { AppShell } from '@/components/AppShell';
 
 export const metadata = {
   title: 'Candidaturas',
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <AppShell>{children}</AppShell>
+        </ThemeProvider>
       </body>
     </html>
   );

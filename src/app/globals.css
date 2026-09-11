@@ -70,6 +70,66 @@ body {
   transition: background 0.3s, color 0.3s;
 }
 
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 18px;
+  background: var(--card);
+  border-right: 1px solid var(--card-border);
+  backdrop-filter: blur(18px);
+}
+
+.sidebar-brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-link {
+  padding: 12px 14px;
+  border-radius: 12px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebar-link:hover {
+  background: var(--dropdown-hover);
+  color: var(--text);
+}
+
+.sidebar-link.active {
+  background: var(--selected-bg);
+  color: var(--accent);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+  padding-top: 20px;
+}
+
+.app-content {
+  flex: 1;
+  min-width: 0;
+}
+
 .container {
   display: flex;
   align-items: center;
@@ -88,6 +148,117 @@ body {
   padding: 36px;
   box-shadow: var(--shadow);
   transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+
+.card-wide {
+  max-width: 720px;
+}
+
+.nearby-fields {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  gap: 16px;
+}
+
+.radius-trigger {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--input-border);
+  border-radius: 14px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  background: var(--input-bg);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.radius-dropdown {
+  min-width: 140px;
+}
+
+.dropdown-item.selected {
+  background: var(--selected-bg);
+  color: var(--accent);
+}
+
+.nearby-results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nearby-summary {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.nearby-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+}
+
+.nearby-item strong {
+  display: block;
+  font-size: 0.9375rem;
+}
+
+.nearby-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.nearby-distance {
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+  }
+
+  .sidebar-brand {
+    margin-bottom: 0;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    flex: 1;
+  }
+
+  .sidebar-footer {
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .nearby-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .container {
+    min-height: auto;
+  }
 }
 
 .card-header {

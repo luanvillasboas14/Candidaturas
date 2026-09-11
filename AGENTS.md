@@ -23,7 +23,9 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - A coluna `vaga_endereco` armazena a descrição legível da vaga no momento da candidatura (ex: "Desenvolvedor Front-end — São Paulo - SP").
 - Quando uma candidatura é criada com sucesso, a API retorna `hasOtherCandidaturas` e `otherCandidaturasCount` para informar se o mesmo telefone já possui candidaturas em outras vagas.
 - Antes do INSERT, o backend busca o `contact_id` no CRM DNA pelo telefone normalizado usando `GET /api/contacts?phone=...` com Bearer token `CRM_DNA_API_TOKEN`. Se não encontrar, o campo fica `null`.
-- Após o INSERT bem-sucedido, o backend chama o webhook n8n `https://dnaworkia-n8n.vkfaze.easypanel.host/webhook/criacaocandidaturas` (POST) com os dados da candidatura + `contact_name` do CRM DNA. Se o INSERT falhar, o webhook não é chamado.
+- Após o INSERT bem-sucedido, o backend chama o webhook n8n `https://dnaworkia-n8n.vkfaze.easypanel.host/webhook/criacaocandidaturas` (POST) com os dados da candidatura + `contact_name` do CRM DNA + `total_candidaturas` (total do telefone, incluindo a atual) + `outras_candidaturas` (em outras vagas). Se o INSERT falhar, o webhook não é chamado.
+- A aba lateral navega entre Candidaturas (`/`) e Vagas próximas (`/vagas-proximas`).
+- `POST /api/vagas-proximas` recebe `cep` e `raioKm`, geocodifica o CEP (BrasilAPI) e usa `latitude`/`longitude` da tabela `jobs_enriched` para filtrar pelo raio e devolver as vagas da mais próxima para a mais distante.
 
 ## Variáveis de ambiente obrigatórias
 - `NEXT_PUBLIC_SUPABASE_URL`
@@ -32,8 +34,13 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 
 ## Estrutura de pastas
 - `src/app/api/candidaturas/route.ts` — API de criação de candidatura.
+- `src/app/api/vagas-proximas/route.ts` — API de busca de vagas por CEP e raio.
 - `src/app/page.tsx` — página de criação.
+- `src/app/vagas-proximas/page.tsx` — página de vagas próximas.
+- `src/components/AppShell.tsx` — aba lateral com navegação.
 - `src/components/CandidaturaForm.tsx` — formulário interativo.
+- `src/components/VagasProximasForm.tsx` — formulário de CEP e raio.
+- `src/lib/geo.ts` — geocodificação de CEP/endereço e cálculo de distância.
 - `src/lib/phone.ts` — normalização de telefone.
 - `src/lib/supabase.ts` — cliente Supabase anon + busca de vagas.
 - `src/lib/supabase-server.ts` — cliente Supabase service role + INSERT de candidatura.

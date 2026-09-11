@@ -30,6 +30,8 @@ Sistema interno para registrar candidaturas de candidatos a vagas do DNA Work.
 - Após salvar no banco, o sistema chama o webhook n8n para iniciar a automação de criação do negócio, enviando também o nome do contato (`contact_name`).
 - A service role key do Supabase fica somente no backend (API route); o frontend usa anon key.
 - A página possui modo claro/escuro (botão no topo direito) e não tem login por enquanto.
+- A aba lateral navega entre Candidaturas e Vagas próximas.
+- Em Vagas próximas, o atendente informa o CEP e o raio; o sistema localiza o CEP e usa latitude/longitude da tabela `jobs_enriched` para listar as vagas dentro do raio, da mais próxima para a mais distante.
 
 ## Arquivos principais
 - `src/app/page.tsx` — tela de criação

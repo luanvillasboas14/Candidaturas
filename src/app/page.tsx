@@ -1,6 +1,4 @@
-import Image from 'next/image';
 import { CandidaturaForm } from '@/components/CandidaturaForm';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import { listJobs } from '@/lib/supabase';
 import { JobOption } from '@/types/candidatura';
 
@@ -17,20 +15,6 @@ export default async function HomePage() {
   return (
     <main className="container">
       <div className="card">
-        <div className="card-header">
-          <div className="logo-wrapper">
-            <Image
-              src="/logo-dna.png"
-              alt="DNA Work"
-              width={160}
-              height={48}
-              priority
-              className="logo"
-            />
-          </div>
-          <ThemeToggle />
-        </div>
-
         <h1>Nova candidatura</h1>
         <p className="subtitle">
           Registre o interesse de um candidato em uma vaga.

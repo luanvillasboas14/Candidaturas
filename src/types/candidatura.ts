@@ -32,3 +32,11 @@ export interface JobOption {
   company: string;
   location: string;
 }
+
+export interface NearbyJob {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  distanceKm: number;
+}
