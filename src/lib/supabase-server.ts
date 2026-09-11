@@ -10,7 +10,7 @@ function getSupabaseServer(): SupabaseClient {
     return supabaseServer;
   }
 
-  const supabaseUrl = readEnv('SUPABASE_URL');
+  const supabaseUrl = readEnv('SUPABASE_URL') || readEnv('NEXT_PUBLIC_SUPABASE_URL');
   const serviceRoleKey = readEnv('SUPABASE_SERVICE_ROLE_KEY');
 
   if (!supabaseUrl || !serviceRoleKey) {

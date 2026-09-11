@@ -5,11 +5,10 @@ import { JobOption, CandidaturaResponse } from '@/types/candidatura';
 
 type Status = 'idle' | 'loading' | 'success' | 'duplicate' | 'error';
 
-interface CandidaturaFormProps {
-  jobs: JobOption[];
-}
-
-export function CandidaturaForm({ jobs }: CandidaturaFormProps) {
+export function CandidaturaForm() {
+  const [jobs, setJobs] = useState<JobOption[]>([]);
+  const [jobsError, setJobsError] = useState('');
+  const [jobsLoading, setJobsLoading] = useState(true);
   const [telefone, setTelefone] = useState('');
   const [jobId, setJobId] = useState('');
   const [jobSearch, setJobSearch] = useState('');
@@ -17,6 +16,37 @@ export function CandidaturaForm({ jobs }: CandidaturaFormProps) {
   const [status, setStatus] = useState<Status>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadJobs() {
+      try {
+        const response = await fetch('/api/vagas');
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || 'Falha ao carregar vagas.');
+        }
+        if (!cancelled) {
+          setJobs(result.jobs || []);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar vagas:', error);
+        if (!cancelled) {
+          setJobsError('Não foi possível carregar as vagas no momento.');
+        }
+      } finally {
+        if (!cancelled) {
+          setJobsLoading(false);
+        }
+      }
+    }
+
+    void loadJobs();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const selectedJob = useMemo(
     () => jobs.find((job) => job.id === jobId) || null,
@@ -137,8 +167,12 @@ export function CandidaturaForm({ jobs }: CandidaturaFormProps) {
               setIsJobDropdownOpen(true);
             }}
             onFocus={() => setIsJobDropdownOpen(true)}
-            placeholder="Buscar por título, empresa ou local..."
-            disabled={isLoading || jobs.length === 0}
+            placeholder={
+              jobsLoading
+                ? 'Carregando vagas...'
+                : 'Buscar por título, empresa ou local...'
+            }
+            disabled={isLoading || jobsLoading || jobs.length === 0}
             required
           />
           {isJobDropdownOpen && filteredJobs.length > 0 && (
@@ -191,6 +225,7 @@ export function CandidaturaForm({ jobs }: CandidaturaFormProps) {
       {status === 'error' && (
         <div className="message error">{statusMessage}</div>
       )}
+      {jobsError && <div className="message error">{jobsError}</div>}
     </form>
   );
 }

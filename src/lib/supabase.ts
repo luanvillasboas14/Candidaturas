@@ -9,8 +9,8 @@ function getSupabase(): SupabaseClient {
     return supabaseClient;
   }
 
-  const supabaseUrl = readEnv('SUPABASE_URL');
-  const supabaseAnonKey = readEnv('SUPABASE_ANON_KEY');
+  const supabaseUrl = readEnv('SUPABASE_URL') || readEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const supabaseAnonKey = readEnv('SUPABASE_ANON_KEY') || readEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Supabase URL e anon key devem estar configurados.');

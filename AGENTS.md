@@ -12,9 +12,9 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 
 ## Stack e padrões
 - Next.js 15 com App Router e TypeScript.
-- Server Components para buscar dados estáticos (ex: lista de vagas).
+- Server Components para layout estático; listas de vagas vêm de API routes em runtime.
 - Client Components apenas para interatividade de formulário (`'use client'`).
-- API routes para operações que precisam de service role key (INSERT em `candidaturas`).
+- API routes para operações que precisam de service role key (INSERT em `candidaturas`) e para buscar vagas em runtime.
 - Supabase: anon key no frontend, service role key somente no backend via variável de ambiente.
 - Telefone sempre normalizado para E.164 (`55DDNNNNNNNN`) antes de persistir e antes de validar duplicidade.
 - Duplicidade é protegida pelo banco via `UNIQUE(telefone_normalizado, vaga_endereco)`; o frontend não consulta antes de tentar criar. Isso garante que vagas idênticas com IDs diferentes não gerem candidaturas duplicadas.
@@ -25,6 +25,7 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - Antes do INSERT, o backend busca o `contact_id` no CRM DNA pelo telefone normalizado usando `GET /api/contacts?phone=...` com Bearer token `CRM_DNA_API_TOKEN`. Se não encontrar, o campo fica `null`.
 - Após o INSERT bem-sucedido, o backend chama o webhook n8n `https://dnaworkia-n8n.vkfaze.easypanel.host/webhook/criacaocandidaturas` (POST) com os dados da candidatura + `contact_name` do CRM DNA + `total_candidaturas` (total do telefone, incluindo a atual) + `outras_candidaturas` (em outras vagas). Se o INSERT falhar, o webhook não é chamado.
 - A aba lateral navega entre Vagas próximas (`/`) e Candidaturas (`/candidaturas`). A home abre em Vagas próximas.
+- `GET /api/vagas` devolve a lista da tabela `jobs` para o formulário de candidatura.
 - `POST /api/vagas-proximas` recebe `cep` e `raioKm`, geocodifica o CEP (BrasilAPI) e usa `latitude`/`longitude` da tabela `jobs_enriched` para filtrar pelo raio e devolver as vagas da mais próxima para a mais distante.
 
 ## Variáveis de ambiente obrigatórias
@@ -39,6 +40,7 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 
 ## Estrutura de pastas
 - `src/app/api/candidaturas/route.ts` — API de criação de candidatura.
+- `src/app/api/vagas/route.ts` — API da lista de vagas do formulário de candidatura.
 - `src/app/api/vagas-proximas/route.ts` — API de busca de vagas por CEP e raio.
 - `src/app/page.tsx` — página inicial de vagas próximas.
 - `src/app/candidaturas/page.tsx` — página de criação de candidatura.
