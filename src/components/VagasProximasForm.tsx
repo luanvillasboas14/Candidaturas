@@ -46,7 +46,7 @@ function buildCandidateText(jobs: NearbyJob[]): string {
     ? 'Possui interesse?'
     : 'Possui interesse? Se sim, nos informe o número da vaga.';
 
-  return [header, '', ...lines, '', footer].join('\n');
+  return [header, '', lines.join('\n\n'), '', footer].join('\n');
 }
 
 export function VagasProximasForm() {
