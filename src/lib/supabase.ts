@@ -30,6 +30,7 @@ export interface JobGeo {
   salaryMax: number;
   salaryRange: string;
   benefits: string;
+  codigo: string;
   latitude: number;
   longitude: number;
 }
@@ -62,17 +63,35 @@ export async function listActiveJobsForGeo(): Promise<JobGeo[]> {
     throw new Error(`Erro ao buscar vagas: ${error.message}`);
   }
 
-  return (data || []).map((job) => ({
-    id: job.source_job_id || job.id,
-    title: job.title || 'Vaga sem título',
-    company: job.company_name || 'Empresa não informada',
-    location: job.location || `${job.city || ''} ${job.state || ''}`.trim() || 'Local não informado',
-    contractType: typeof job.contract_type === 'string' ? job.contract_type : '',
-    salaryMin: Number(job.salary_min) || 0,
-    salaryMax: Number(job.salary_max) || 0,
-    salaryRange: typeof job.salary_range === 'string' ? job.salary_range.trim() : '',
-    benefits: typeof job.benefits === 'string' ? job.benefits.trim() : '',
-    latitude: Number(job.latitude),
-    longitude: Number(job.longitude),
-  })).filter((job) => Number.isFinite(job.latitude) && Number.isFinite(job.longitude));
+  const { data: jobCodes, error: codesError } = await getSupabase()
+    .from('jobs')
+    .select('id, codigo');
+
+  if (codesError) {
+    throw new Error(`Erro ao buscar códigos das vagas: ${codesError.message}`);
+  }
+
+  const codigoById = new Map(
+    (jobCodes || [])
+      .filter((row) => row.id && row.codigo)
+      .map((row) => [String(row.id), String(row.codigo).trim()])
+  );
+
+  return (data || []).map((job) => {
+    const sourceId = job.source_job_id || job.id;
+    return {
+      id: sourceId,
+      title: job.title || 'Vaga sem título',
+      company: job.company_name || 'Empresa não informada',
+      location: job.location || `${job.city || ''} ${job.state || ''}`.trim() || 'Local não informado',
+      contractType: typeof job.contract_type === 'string' ? job.contract_type : '',
+      salaryMin: Number(job.salary_min) || 0,
+      salaryMax: Number(job.salary_max) || 0,
+      salaryRange: typeof job.salary_range === 'string' ? job.salary_range.trim() : '',
+      benefits: typeof job.benefits === 'string' ? job.benefits.trim() : '',
+      codigo: codigoById.get(String(sourceId)) || '',
+      latitude: Number(job.latitude),
+      longitude: Number(job.longitude),
+    };
+  }).filter((job) => Number.isFinite(job.latitude) && Number.isFinite(job.longitude));
 }

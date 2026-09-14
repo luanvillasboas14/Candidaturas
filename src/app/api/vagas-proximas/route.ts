@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { listActiveJobsForGeo } from '@/lib/supabase';
+import { listJobSchedulesByCodigo } from '@/lib/dna-work-hours';
 import { geocodeCep, haversineKm, normalizeCep } from '@/lib/geo';
 import { JobContractType, NearbyJob } from '@/types/candidatura';
 
@@ -37,7 +38,7 @@ function formatSalaryLabel(job: {
 }
 
 function dedupeKey(job: NearbyJob): string {
-  return [job.title, job.company, job.location, job.contractType]
+  return [job.title, job.company, job.location, job.contractType, job.schedule]
     .map((part) => part.trim().toLowerCase().replace(/\s+/g, ' '))
     .join('|');
 }
@@ -78,7 +79,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const jobs = await listActiveJobsForGeo();
+    const [jobs, schedules] = await Promise.all([
+      listActiveJobsForGeo(),
+      listJobSchedulesByCodigo(),
+    ]);
     const nearbyByKey = new Map<string, NearbyJob>();
 
     for (const job of jobs) {
@@ -99,6 +103,7 @@ export async function POST(request: Request) {
         contractType,
         salaryLabel: formatSalaryLabel(job),
         hasBenefits: Boolean(job.benefits),
+        schedule: job.codigo ? schedules.get(job.codigo) || '' : '',
         distanceKm: Number(distanceKm.toFixed(2)),
       };
       const key = dedupeKey(candidate);

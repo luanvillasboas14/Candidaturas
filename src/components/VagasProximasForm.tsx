@@ -31,10 +31,22 @@ function buildCandidateText(jobs: NearbyJob[]): string {
     const salary = job.hasBenefits
       ? `${job.salaryLabel} + benefícios`
       : job.salaryLabel;
-    return `${index + 1}. ${job.title}\n📍 ${job.location}\n💰 ${salary}`;
+    const parts = [
+      `${index + 1}. ${job.title}`,
+      `📍 ${job.location}`,
+    ];
+    if (job.schedule) {
+      parts.push(`🕒 ${job.schedule}`);
+    }
+    parts.push(`💰 ${salary}`);
+    return parts.join('\n');
   });
 
-  return [header, '', ...lines].join('\n');
+  const footer = singular
+    ? 'Possui interesse?'
+    : 'Possui interesse? Se sim, nos informe o número da vaga.';
+
+  return [header, '', ...lines, '', footer].join('\n');
 }
 
 export function VagasProximasForm() {
@@ -262,6 +274,9 @@ export function VagasProximasForm() {
                   <span className="nearby-meta">
                     {job.contractType} • {job.company} • {job.location}
                   </span>
+                  {job.schedule ? (
+                    <span className="nearby-schedule">{job.schedule}</span>
+                  ) : null}
                 </span>
                 <span className="nearby-distance">{formatDistance(job.distanceKm)}</span>
               </button>

@@ -43,5 +43,6 @@ export interface NearbyJob {
   contractType: JobContractType;
   salaryLabel: string;
   hasBenefits: boolean;
+  schedule: string;
   distanceKm: number;
 }

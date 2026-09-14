@@ -467,6 +467,15 @@ body {
   font-weight: 500;
 }
 
+.nearby-schedule {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 .nearby-distance {
   flex-shrink: 0;
   font-size: 0.8125rem;

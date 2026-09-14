@@ -26,7 +26,7 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - Após o INSERT bem-sucedido, o backend chama o webhook n8n `https://dnaworkia-n8n.vkfaze.easypanel.host/webhook/criacaocandidaturas` (POST) com os dados da candidatura + `contact_name` do CRM DNA + `total_candidaturas` (total do telefone, incluindo a atual) + `outras_candidaturas` (em outras vagas). Se o INSERT falhar, o webhook não é chamado.
 - A aba lateral navega entre Vagas próximas (`/`) e Candidaturas (`/candidaturas`). A home abre em Vagas próximas.
 - `GET /api/vagas` devolve a lista da tabela `jobs` para o formulário de candidatura.
-- `POST /api/vagas-proximas` recebe `cep`, `raioKm` e `tipos` (`CLT` e/ou `Estágio`), geocodifica o CEP (BrasilAPI) e usa `latitude`/`longitude` da tabela `jobs_enriched` para filtrar pelo raio. Vagas iguais (mesmo título, empresa, local e tipo) entram uma vez só, ficando a mais próxima. O texto para o candidato usa endereço e salário (0 = salário a combinar; com benefícios = salário + benefícios), sem distância.
+- `POST /api/vagas-proximas` recebe `cep`, `raioKm` e `tipos` (`CLT` e/ou `Estágio`), geocodifica o CEP (BrasilAPI) e usa `latitude`/`longitude` da tabela `jobs_enriched` para filtrar pelo raio. Vagas iguais (mesmo título, empresa, local e tipo) entram uma vez só, ficando a mais próxima. O texto para o candidato usa endereço, horário (quando existir) e salário (0 = salário a combinar; com benefícios = salário + benefícios), sem distância. Com uma vaga, termina com “Possui interesse?”. Com várias, “Possui interesse? Se sim, nos informe o número da vaga.” O horário vem de `https://sistema.dnawork.ai/webhook/empresa.php`, cruzado pelo `codigo` da tabela `jobs`, e aparece no card e na mensagem. Se a vaga tem folga (no texto da carga ou por trabalhar 6–7 dias), isso entra no horário.
 
 ## Variáveis de ambiente obrigatórias
 - `NEXT_PUBLIC_SUPABASE_URL`
@@ -50,6 +50,7 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - `src/components/CandidaturaForm.tsx` — formulário interativo.
 - `src/components/VagasProximasForm.tsx` — formulário de CEP e raio.
 - `src/lib/geo.ts` — geocodificação de CEP/endereço e cálculo de distância.
+- `src/lib/dna-work-hours.ts` — horários das vagas no webhook da DNA Work.
 - `src/lib/env.ts` — leitura de variáveis de ambiente em runtime.
 - `src/lib/phone.ts` — normalização de telefone.
 - `src/lib/supabase.ts` — cliente Supabase anon + busca de vagas.
