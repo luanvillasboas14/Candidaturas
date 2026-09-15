@@ -22,9 +22,10 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - A coluna `status` foi removida da tabela `candidaturas`.
 - A coluna `vaga_endereco` armazena a descrição legível da vaga no momento da candidatura (ex: "Desenvolvedor Front-end — São Paulo - SP").
 - Quando uma candidatura é criada com sucesso, a API retorna `hasOtherCandidaturas` e `otherCandidaturasCount` para informar se o mesmo telefone já possui candidaturas em outras vagas.
-- Antes do INSERT, o backend busca o `contact_id` no CRM DNA pelo telefone normalizado usando `GET /api/contacts?phone=...` com Bearer token `CRM_DNA_API_TOKEN`. Se não encontrar, o campo fica `null`.
+- Antes do INSERT, o backend busca o `contact_id` no CRM DNA pelo telefone normalizado usando `GET /api/contacts?phone=...` em `CRM_DNA_API_URL` (`https://integrations.bwipo.com`) com Bearer token `CRM_DNA_API_TOKEN`. Se não encontrar, o campo fica `null`. Tokens Bearer são recusados em `bwipo.com` / `api.bwipo.com`; o host antigo `frontend-front.v74knz.easypanel.host` não deve ser usado.
 - Após o INSERT bem-sucedido, o backend chama o webhook n8n `https://dnaworkia-n8n.vkfaze.easypanel.host/webhook/criacaocandidaturas` (POST) com os dados da candidatura + `contact_name` do CRM DNA + `total_candidaturas` (total do telefone, incluindo a atual) + `outras_candidaturas` (em outras vagas). Se o INSERT falhar, o webhook não é chamado.
-- A aba lateral navega entre Vagas próximas (`/`) e Candidaturas (`/candidaturas`). A home abre em Vagas próximas.
+- A aba lateral navega entre Vagas próximas (`/`), Candidaturas (`/candidaturas`) e Só contrato (`/so-contrato`). A home abre em Vagas próximas.
+- `POST /api/so-contrato/analisar` recebe a `foto` (multipart), lê nome e telefone com OCR e devolve a lista de candidatos. `POST /api/so-contrato` recebe `{ candidatos: [{ nome, telefone }] }` e cria no CRM DNA via `POST /api/leads` (mesmo contrato do n8n): contato + negócio no estágio `cmplhpr8z0021qn012ni60tri` (Ok contratação, pipeline `cmodk1kqc0002qp013eranfa2`), responsável Ketolyn quando encontrada, e em seguida `POST /api/deals/:id/tags` com a tag "Só contrato". `reuseOpenDeal` evita duplicar negócio aberto no mesmo funil.
 - `GET /api/vagas` devolve a lista da tabela `jobs` para o formulário de candidatura.
 - `POST /api/vagas-proximas` recebe `cep`, `raioKm` e `tipos` (`CLT` e/ou `Estágio`), geocodifica o CEP (BrasilAPI) e usa `latitude`/`longitude` da tabela `jobs_enriched` para filtrar pelo raio. Vagas iguais (mesmo título, empresa, local e tipo) entram uma vez só, ficando a mais próxima. O texto para o candidato usa endereço, horário (quando existir) e salário (0 = salário a combinar; com benefícios = salário + benefícios), sem distância. Com uma vaga, termina com “Possui interesse?”. Com várias, “Possui interesse? Se sim, nos informe o número da vaga.” O horário vem de `https://sistema.dnawork.ai/webhook/empresa.php`, cruzado pelo `codigo` da tabela `jobs`, e aparece no card e na mensagem. Se a vaga tem folga (no texto da carga ou por trabalhar 6–7 dias), isso entra no horário.
 
@@ -32,6 +33,9 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `CRM_DNA_API_URL` — `https://integrations.bwipo.com` (não usar o frontend EasyPanel nem `api.bwipo.com`)
+- `CRM_DNA_API_TOKEN`
+- `CRM_DNA_OWNER_KETOLYN_ID` (opcional; Só contrato usa se existir)
 
 ## Deploy
 - O GitHub Actions (`.github/workflows/deploy.yml`) constrói a imagem Docker no push para `main` e publica em `ghcr.io/luanvillasboas14/candidaturas`.
@@ -44,11 +48,17 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - `src/app/api/candidaturas/route.ts` — API de criação de candidatura.
 - `src/app/api/vagas/route.ts` — API da lista de vagas do formulário de candidatura.
 - `src/app/api/vagas-proximas/route.ts` — API de busca de vagas por CEP e raio.
+- `src/app/api/so-contrato/route.ts` — API de cadastro Só contrato no CRM.
+- `src/app/api/so-contrato/analisar/route.ts` — API de leitura da foto (OCR).
 - `src/app/page.tsx` — página inicial de vagas próximas.
 - `src/app/candidaturas/page.tsx` — página de criação de candidatura.
+- `src/app/so-contrato/page.tsx` — página de upload Só contrato.
 - `src/components/AppShell.tsx` — aba lateral com navegação.
 - `src/components/CandidaturaForm.tsx` — formulário interativo.
 - `src/components/VagasProximasForm.tsx` — formulário de CEP e raio.
+- `src/components/SoContratoForm.tsx` — upload da foto, conferência dos candidatos e criação dos leads.
+- `src/lib/crm-so-contrato.ts` — criação do negócio Só contrato no CRM DNA.
+- `src/lib/so-contrato-ocr.ts` — extração de nome e telefone do texto da foto.
 - `src/lib/geo.ts` — geocodificação de CEP/endereço e cálculo de distância.
 - `src/lib/dna-work-hours.ts` — horários das vagas no webhook da DNA Work.
 - `src/lib/env.ts` — leitura de variáveis de ambiente em runtime.

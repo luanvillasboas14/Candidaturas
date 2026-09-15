@@ -8,6 +8,7 @@ import { ThemeToggle } from './ThemeToggle';
 const NAV_ITEMS = [
   { href: '/', label: 'Vagas próximas' },
   { href: '/candidaturas', label: 'Candidaturas' },
+  { href: '/so-contrato', label: 'Só contrato' },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
