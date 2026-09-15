@@ -43,11 +43,23 @@ export function SoContratoForm() {
     try {
       const body = new FormData();
       body.set('foto', file);
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 55000);
       const response = await fetch('/api/so-contrato/analisar', {
         method: 'POST',
         body,
+        signal: controller.signal,
       });
-      const result = await response.json();
+      window.clearTimeout(timeout);
+      const raw = await response.text();
+      let result: { success?: boolean; message?: string; candidatos?: unknown } = {};
+      try {
+        result = raw ? JSON.parse(raw) : {};
+      } catch {
+        setStatus('error');
+        setStatusMessage('Não foi possível ler a foto. Tente novamente.');
+        return;
+      }
 
       if (!response.ok || !result.success) {
         setStatus('error');
@@ -66,9 +78,13 @@ export function SoContratoForm() {
       setCandidates(list);
       setStatus('idle');
       setStatusMessage(result.message || '');
-    } catch {
+    } catch (error) {
       setStatus('error');
-      setStatusMessage('Erro inesperado ao analisar a foto.');
+      setStatusMessage(
+        error instanceof DOMException && error.name === 'AbortError'
+          ? 'A leitura da foto demorou demais. Tente uma imagem menor ou mais nítida.'
+          : 'Erro inesperado ao analisar a foto.'
+      );
     }
   }
 

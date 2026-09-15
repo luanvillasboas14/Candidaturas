@@ -1,24 +1,13 @@
 import { NextResponse } from 'next/server';
 import { extractCandidatesFromText } from '@/lib/so-contrato-ocr';
+import { recognizePhotoText } from '@/lib/so-contrato-tesseract';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-
-let ocrWorker: Awaited<ReturnType<typeof import('tesseract.js')['createWorker']>> | null = null;
-
-async function getOcrWorker() {
-  if (ocrWorker) return ocrWorker;
-  const { createWorker, PSM } = await import('tesseract.js');
-  ocrWorker = await createWorker('por+eng');
-  await ocrWorker.setParameters({
-    tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
-    preserve_interword_spaces: '1',
-  });
-  return ocrWorker;
-}
 
 export async function POST(request: Request) {
   try {
@@ -47,9 +36,8 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await foto.arrayBuffer());
-    const worker = await getOcrWorker();
-    const result = await worker.recognize(buffer);
-    const candidatos = extractCandidatesFromText(result.data.text || '');
+    const text = await recognizePhotoText(buffer);
+    const candidatos = extractCandidatesFromText(text);
 
     if (candidatos.length === 0) {
       return NextResponse.json(
