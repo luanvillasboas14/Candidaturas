@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { extractCandidatesFromText } from '@/lib/so-contrato-ocr';
-import { recognizePhotoText } from '@/lib/so-contrato-tesseract';
+import { extractCandidatesFromText, mergeCandidateGroups } from '@/lib/so-contrato-ocr';
+import { recognizePhotoPasses } from '@/lib/so-contrato-tesseract';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,8 +36,10 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(await foto.arrayBuffer());
-    const text = await recognizePhotoText(buffer);
-    const candidatos = extractCandidatesFromText(text);
+    const passes = await recognizePhotoPasses(buffer);
+    const candidatos = mergeCandidateGroups(
+      passes.map((pass) => extractCandidatesFromText(pass.text, pass.lines))
+    );
 
     if (candidatos.length === 0) {
       return NextResponse.json(

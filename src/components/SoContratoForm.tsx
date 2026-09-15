@@ -44,7 +44,7 @@ export function SoContratoForm() {
       const body = new FormData();
       body.set('foto', file);
       const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 55000);
+      const timeout = window.setTimeout(() => controller.abort(), 70000);
       const response = await fetch('/api/so-contrato/analisar', {
         method: 'POST',
         body,
