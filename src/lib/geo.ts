@@ -74,22 +74,59 @@ export async function geocodeAddress(address: string): Promise<Coordinates | nul
   return coordinates;
 }
 
+const SAO_PAULO_CITY_CENTER: Coordinates = { lat: -23.5475, lng: -46.63611 };
+
+function parseCoordinates(latRaw: unknown, lngRaw: unknown): Coordinates | null {
+  const lat = Number(latRaw);
+  const lng = Number(lngRaw);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat === 0 && lng === 0) return null;
+  return { lat, lng };
+}
+
+function isGenericCityCenter(coords: Coordinates, city: string): boolean {
+  const cityKey = city
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+  return cityKey === 'sao paulo' && haversineKm(coords, SAO_PAULO_CITY_CENTER) < 1.5;
+}
+
+async function geocodeCepAwesomeApi(cep: string): Promise<Coordinates | null> {
+  const response = await fetch(`https://cep.awesomeapi.com.br/json/${cep}`);
+  if (!response.ok) return null;
+  const data = await response.json();
+  return parseCoordinates(data?.lat, data?.lng);
+}
+
 export async function geocodeCep(cep: string): Promise<Coordinates | null> {
   const response = await fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`);
   if (!response.ok) {
-    return null;
+    return geocodeCepAwesomeApi(cep);
   }
 
   const data = await response.json();
-  const lat = Number(data?.location?.coordinates?.latitude);
-  const lng = Number(data?.location?.coordinates?.longitude);
-  if (Number.isFinite(lat) && Number.isFinite(lng)) {
-    return { lat, lng };
-  }
-
-  const fallback = [data.street, data.neighborhood, data.city, data.state, 'Brasil']
+  const streetAddress = [data.street, data.neighborhood, data.city, data.state, 'Brasil']
     .filter(Boolean)
     .join(', ');
 
-  return geocodeAddress(fallback);
+  if (data.street) {
+    const fromStreet = await geocodeAddress(streetAddress);
+    if (fromStreet) return fromStreet;
+  }
+
+  const fromAwesome = await geocodeCepAwesomeApi(cep);
+  if (fromAwesome) return fromAwesome;
+
+  const fromBrasilApi = parseCoordinates(
+    data?.location?.coordinates?.latitude,
+    data?.location?.coordinates?.longitude
+  );
+  if (fromBrasilApi && !isGenericCityCenter(fromBrasilApi, String(data.city || ''))) {
+    return fromBrasilApi;
+  }
+
+  const cityAddress = [data.city, data.state, 'Brasil'].filter(Boolean).join(', ');
+  return cityAddress ? geocodeAddress(cityAddress) : null;
 }
