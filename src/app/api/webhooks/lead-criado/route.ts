@@ -110,9 +110,18 @@ export async function POST(request: Request) {
       );
     }
 
+    const detail =
+      error && typeof error === 'object' && 'message' in error && typeof error.message === 'string'
+        ? error.message
+        : null;
     console.error('Erro no webhook lead-criado:', error);
     return NextResponse.json(
-      { success: false, message: 'Erro inesperado ao gravar a origem do lead.' },
+      {
+        success: false,
+        message: detail
+          ? `Erro ao gravar a origem do lead: ${detail}`
+          : 'Erro inesperado ao gravar a origem do lead.',
+      },
       { status: 500 }
     );
   }

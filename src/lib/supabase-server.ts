@@ -104,7 +104,6 @@ export async function upsertTrackerLead(input: {
     fbclid: input.fbclid,
     gclid: input.gclid,
     referrer: input.referrer,
-    updated_at: new Date().toISOString(),
   };
 
   if (existing?.id) {
