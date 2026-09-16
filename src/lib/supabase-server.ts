@@ -72,3 +72,47 @@ export async function countOtherCandidaturas(
 
   return count || 0;
 }
+
+export async function upsertTrackerLead(input: {
+  telefone: string;
+  telefone_normalizado: string;
+  origem: string | null;
+  campanha: string | null;
+  headline: string | null;
+  ctwa_clid: string | null;
+  fbclid: string | null;
+  gclid: string | null;
+  referrer: string | null;
+}): Promise<void> {
+  const supabase = getSupabaseServer();
+  const { data: existing, error: selectError } = await supabase
+    .from('tracker_leads')
+    .select('id')
+    .eq('telefone_normalizado', input.telefone_normalizado)
+    .limit(1)
+    .maybeSingle();
+
+  if (selectError) throw selectError;
+
+  const payload = {
+    telefone: input.telefone,
+    telefone_normalizado: input.telefone_normalizado,
+    origem: input.origem,
+    campanha: input.campanha,
+    headline: input.headline,
+    ctwa_clid: input.ctwa_clid,
+    fbclid: input.fbclid,
+    gclid: input.gclid,
+    referrer: input.referrer,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (existing?.id) {
+    const { error } = await supabase.from('tracker_leads').update(payload).eq('id', existing.id);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await supabase.from('tracker_leads').insert(payload);
+  if (error) throw error;
+}

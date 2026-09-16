@@ -23,7 +23,7 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - A coluna `vaga_endereco` armazena a descrição legível da vaga no momento da candidatura (ex: "Desenvolvedor Front-end — São Paulo - SP").
 - Quando uma candidatura é criada com sucesso, a API retorna `hasOtherCandidaturas` e `otherCandidaturasCount` para informar se o mesmo telefone já possui candidaturas em outras vagas.
 - Antes do INSERT, o backend busca o `contact_id` no CRM DNA pelo telefone normalizado usando `GET /api/contacts?phone=...` em `CRM_DNA_API_URL` (`https://integrations.bwipo.com`) com Bearer token `CRM_DNA_API_TOKEN`. Se não encontrar, o campo fica `null`. Tokens Bearer são recusados em `bwipo.com` / `api.bwipo.com`; o host antigo `frontend-front.v74knz.easypanel.host` não deve ser usado.
-- Após o INSERT bem-sucedido, o backend chama o webhook n8n `https://dnaworkia-n8n.vkfaze.easypanel.host/webhook/criacaocandidaturas` (POST) com os dados da candidatura + `contact_name` do CRM DNA + `total_candidaturas` (total do telefone, incluindo a atual) + `outras_candidaturas` (em outras vagas). Se o INSERT falhar, o webhook não é chamado.
+- Após o INSERT bem-sucedido, o backend busca o tracking do contato no CRM DNA (`GET /api/contacts?phone=...&includeTracking=1` e `GET /api/contacts/:id`) e grava/atualiza `tracker_leads` (origem, campanha, headline, ctwa_clid, fbclid, gclid, referrer). Se o tracking falhar, a candidatura continua. Em seguida chama o webhook n8n `https://dnaworkia-n8n.vkfaze.easypanel.host/webhook/criacaocandidaturas` (POST) com os dados da candidatura + `contact_name` do CRM DNA + `total_candidaturas` (total do telefone, incluindo a atual) + `outras_candidaturas` (em outras vagas). Se o INSERT falhar, o webhook não é chamado.
 - A aba lateral navega entre Vagas próximas (`/`), Candidaturas (`/candidaturas`) e Só contrato (`/so-contrato`). A home abre em Vagas próximas.
 - `POST /api/so-contrato/analisar` recebe a `foto` (multipart), recorta a tabela mesmo com fundo/UI em volta, lê nome e telefone com OCR (Tesseract local, idiomas em `tessdata/`, sem download na internet) e devolve a lista de candidatos. `POST /api/so-contrato` recebe `{ candidatos: [{ nome, telefone }] }` e cria no CRM DNA via `POST /api/leads` (mesmo contrato do n8n): contato + negócio no estágio `cmplhpr8z0021qn012ni60tri` (Ok contratação, pipeline `cmodk1kqc0002qp013eranfa2`), responsável Ketolyn quando encontrada, e em seguida `POST /api/deals/:id/tags` com a tag "Só contrato". `reuseOpenDeal` evita duplicar negócio aberto no mesmo funil.
 - `GET /api/vagas` devolve a lista da tabela `jobs` para o formulário de candidatura.
@@ -66,10 +66,12 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - `src/lib/dna-work-hours.ts` — horários das vagas no webhook da DNA Work.
 - `src/lib/env.ts` — leitura de variáveis de ambiente em runtime.
 - `src/lib/phone.ts` — normalização de telefone.
+- `src/lib/crm-tracking.ts` — origem, campanha, headline e clids do contato no CRM DNA.
 - `src/lib/supabase.ts` — cliente Supabase anon + busca de vagas.
 - `src/lib/supabase-server.ts` — cliente Supabase service role + INSERT de candidatura.
 - `src/types/candidatura.ts` — tipos compartilhados.
 - `sql/migration_candidaturas.sql` — migration da tabela.
+- `sql/migration_tracker_leads.sql` — tabela `tracker_leads` (telefone, origem, campanha, headline, ctwa_clid, fbclid, gclid, referrer).
 
 ## Decisões arquiteturais
 - A tabela `candidaturas` fica no mesmo Supabase DNA que a tabela `jobs`.
