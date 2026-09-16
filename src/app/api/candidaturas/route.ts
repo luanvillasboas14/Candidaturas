@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { insertCandidatura, countOtherCandidaturas, upsertTrackerLead } from '@/lib/supabase-server';
+import { insertCandidatura, countOtherCandidaturas } from '@/lib/supabase-server';
 import { findContactByPhone } from '@/lib/crm-dna';
-import { getContactTrackingByPhone } from '@/lib/crm-tracking';
 import { normalizePhone } from '@/lib/phone';
 import { CandidaturaResponse } from '@/types/candidatura';
 
@@ -70,19 +69,6 @@ export async function POST(request: Request): Promise<NextResponse<CandidaturaRe
     });
 
     const otherCount = await countOtherCandidaturas(telefoneNormalizado, jobId);
-
-    try {
-      const tracking = await getContactTrackingByPhone(telefoneNormalizado);
-      if (tracking) {
-        await upsertTrackerLead({
-          telefone: telefoneRaw,
-          telefone_normalizado: telefoneNormalizado,
-          ...tracking,
-        });
-      }
-    } catch (error) {
-      console.error('Erro ao gravar tracker_leads:', error);
-    }
 
     await notifyN8N({
       ...candidatura,
