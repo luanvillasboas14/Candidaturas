@@ -10,8 +10,13 @@ export interface ContactTracking {
   referrer: string | null;
 }
 
+export interface ContactTrackingRecord extends ContactTracking {
+  telefone: string;
+}
+
 interface CrmContactTracking {
   id?: string;
+  phone?: string | null;
   source?: string | null;
   referrer?: string | null;
   utmReferrer?: string | null;
@@ -92,7 +97,18 @@ interface CrmContactsResponse {
   items?: CrmContactTracking[];
 }
 
-export async function getContactTrackingByPhone(phone: string): Promise<ContactTracking | null> {
+function withPhone(contact: CrmContactTracking, fallbackPhone?: string | null): ContactTrackingRecord | null {
+  const telefone = text(contact.phone) || text(fallbackPhone);
+  if (!telefone) return null;
+  return { telefone, ...toTracking(contact) };
+}
+
+export async function getContactTrackingById(contactId: string): Promise<ContactTrackingRecord | null> {
+  const detail = await crmRequest<CrmContactTracking>(`/api/contacts/${contactId}`);
+  return withPhone(detail);
+}
+
+export async function getContactTrackingByPhone(phone: string): Promise<ContactTrackingRecord | null> {
   const list = await crmRequest<CrmContactsResponse>(
     `/api/contacts?phone=${encodeURIComponent(phone)}&includeTracking=1&perPage=1`
   );
@@ -101,9 +117,9 @@ export async function getContactTrackingByPhone(phone: string): Promise<ContactT
 
   try {
     const detail = await crmRequest<CrmContactTracking>(`/api/contacts/${summary.id}`);
-    return toTracking({ ...summary, ...detail });
+    return withPhone({ ...summary, ...detail }, phone);
   } catch (error) {
     console.warn('Não foi possível ler o detalhe de tracking do CRM:', error);
-    return toTracking(summary);
+    return withPhone(summary, phone);
   }
 }

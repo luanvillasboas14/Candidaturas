@@ -24,7 +24,7 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 - Quando uma candidatura é criada com sucesso, a API retorna `hasOtherCandidaturas` e `otherCandidaturasCount` para informar se o mesmo telefone já possui candidaturas em outras vagas.
 - Antes do INSERT, o backend busca o `contact_id` no CRM DNA pelo telefone normalizado usando `GET /api/contacts?phone=...` em `CRM_DNA_API_URL` (`https://integrations.bwipo.com`) com Bearer token `CRM_DNA_API_TOKEN`. Se não encontrar, o campo fica `null`. Tokens Bearer são recusados em `bwipo.com` / `api.bwipo.com`; o host antigo `frontend-front.v74knz.easypanel.host` não deve ser usado.
 - Após o INSERT bem-sucedido, o backend chama o webhook n8n `https://dnaworkia-n8n.vkfaze.easypanel.host/webhook/criacaocandidaturas` (POST) com os dados da candidatura + `contact_name` do CRM DNA + `total_candidaturas` (total do telefone, incluindo a atual) + `outras_candidaturas` (em outras vagas). Se o INSERT falhar, o webhook não é chamado.
-- `POST /api/tracker-leads` recebe `{ telefone }`, busca o tracking no CRM DNA e grava/atualiza `tracker_leads`. Pensado para o n8n chamar na criação do lead, não na candidatura.
+- Webhook exclusivo `POST /api/webhooks/lead-criado` (produção: `https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/webhooks/lead-criado`). Só o CRM DNA chama, no evento `deal_created` (aceita também `contact_created`). Não é o webhook n8n `criacaocandidaturas` nem o de horários da DNA. O CRM envia `contactId`; a rota busca o telefone e o tracking no CRM e grava/atualiza `tracker_leads`. Não passa pelo n8n e não roda na criação de candidatura.
 - A aba lateral navega entre Vagas próximas (`/`), Candidaturas (`/candidaturas`) e Só contrato (`/so-contrato`). A home abre em Vagas próximas.
 - `POST /api/so-contrato/analisar` recebe a `foto` (multipart), recorta a tabela mesmo com fundo/UI em volta, lê nome e telefone com OCR (Tesseract local, idiomas em `tessdata/`, sem download na internet) e devolve a lista de candidatos. `POST /api/so-contrato` recebe `{ candidatos: [{ nome, telefone }] }` e cria no CRM DNA via `POST /api/leads` (mesmo contrato do n8n): contato + negócio no estágio `cmplhpr8z0021qn012ni60tri` (Ok contratação, pipeline `cmodk1kqc0002qp013eranfa2`), responsável Ketolyn quando encontrada, e em seguida `POST /api/deals/:id/tags` com a tag "Só contrato". `reuseOpenDeal` evita duplicar negócio aberto no mesmo funil.
 - `GET /api/vagas` devolve a lista da tabela `jobs` para o formulário de candidatura.
@@ -47,7 +47,7 @@ Sempre que implementar algo novo, adicionar neste AGENTS.md apenas o que for rea
 
 ## Estrutura de pastas
 - `src/app/api/candidaturas/route.ts` — API de criação de candidatura.
-- `src/app/api/tracker-leads/route.ts` — API de gravação da origem do lead.
+- `src/app/api/webhooks/lead-criado/route.ts` — webhook exclusivo do CRM na criação do lead (`deal_created`).
 - `src/app/api/vagas/route.ts` — API da lista de vagas do formulário de candidatura.
 - `src/app/api/vagas-proximas/route.ts` — API de busca de vagas por CEP e raio.
 - `src/app/api/so-contrato/route.ts` — API de cadastro Só contrato no CRM.
