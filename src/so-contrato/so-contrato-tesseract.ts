@@ -85,7 +85,9 @@ export interface OcrPass {
   lines: OcrLine[];
 }
 
-export async function recognizeImageText(image: Buffer, psm?: number): Promise<string> {
+type TesseractPsm = (typeof import('tesseract.js'))['PSM'][keyof (typeof import('tesseract.js'))['PSM']];
+
+export async function recognizeImageText(image: Buffer, psm?: TesseractPsm): Promise<string> {
   const worker = await getOcrWorker();
   const { PSM } = await import('tesseract.js');
   await worker.setParameters({
