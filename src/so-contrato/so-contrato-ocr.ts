@@ -1,4 +1,4 @@
-import { normalizePhone } from './phone';
+import { normalizePhone } from '@/lib/phone';
 
 export interface ExtractedCandidate {
   nome: string;

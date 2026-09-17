@@ -1,4 +1,4 @@
-import { CandidaturaForm } from '@/components/CandidaturaForm';
+import { CandidaturaForm } from '@/candidaturas/CandidaturaForm';
 
 export default function CandidaturasPage() {
   return (

@@ -1,4 +1,4 @@
-import { SoContratoForm } from '@/components/SoContratoForm';
+import { SoContratoForm } from '@/so-contrato/SoContratoForm';
 
 export default function SoContratoPage() {
   return (

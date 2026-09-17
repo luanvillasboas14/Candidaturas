@@ -1,4 +1,5 @@
-import { crmRequest } from './crm-dna';
+import { crmRequest } from '@/lib/crm-dna';
+import { firstHumanCampaign } from './campaign-label';
 
 export interface ContactTracking {
   origem: string | null;
@@ -38,11 +39,6 @@ function text(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
-function instagramPostId(url: string): string | null {
-  const match = url.match(/instagram\.com\/(?:p|reel|tv)\/([^/?#]+)/i);
-  return match?.[1] || null;
-}
-
 export function detectOrigem(input: {
   referrer?: string | null;
   source?: string | null;
@@ -69,11 +65,11 @@ export function detectOrigem(input: {
 function toTracking(contact: CrmContactTracking): ContactTracking {
   const referrer = text(contact.referrer) || text(contact.utmReferrer);
   const headline = text(contact.adHeadline) || text(contact.adResolvedName);
-  const campanha =
-    text(contact.adResolvedCampaignName) ||
-    text(contact.adUtmCampaign) ||
-    (referrer ? instagramPostId(referrer) : null) ||
-    text(contact.adSourceId);
+  const campanha = firstHumanCampaign(
+    text(contact.adResolvedCampaignName),
+    headline,
+    text(contact.adUtmCampaign)
+  );
 
   return {
     origem: detectOrigem({

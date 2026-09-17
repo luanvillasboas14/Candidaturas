@@ -1,4 +1,4 @@
-import { VagasProximasForm } from '@/components/VagasProximasForm';
+import { VagasProximasForm } from '@/vagas-proximas/VagasProximasForm';
 
 export default function HomePage() {
   return (

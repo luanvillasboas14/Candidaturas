@@ -85,6 +85,21 @@ export interface OcrPass {
   lines: OcrLine[];
 }
 
+export async function recognizeImageText(image: Buffer, psm?: number): Promise<string> {
+  const worker = await getOcrWorker();
+  const { PSM } = await import('tesseract.js');
+  await worker.setParameters({
+    tessedit_pageseg_mode: psm ?? PSM.AUTO,
+    preserve_interword_spaces: '1',
+  });
+  const result = await withTimeout(
+    worker.recognize(image, {}, { text: true }),
+    OCR_TIMEOUT_MS,
+    'O OCR demorou demais para ler a campanha.'
+  );
+  return result.data.text || '';
+}
+
 export async function recognizePhotoPasses(image: Buffer): Promise<OcrPass[]> {
   const variants = await prepareOcrImages(image);
   const worker = await getOcrWorker();

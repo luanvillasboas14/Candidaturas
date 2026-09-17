@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { extractCandidatesFromText, mergeCandidateGroups } from '@/lib/so-contrato-ocr';
-import { recognizePhotoPasses } from '@/lib/so-contrato-tesseract';
+import { extractCandidatesFromText, mergeCandidateGroups } from '@/so-contrato/so-contrato-ocr';
+import { recognizePhotoPasses } from '@/so-contrato/so-contrato-tesseract';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

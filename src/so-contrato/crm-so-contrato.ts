@@ -1,5 +1,5 @@
-import { readEnv } from './env';
-import { crmRequest } from './crm-dna';
+import { crmRequest } from '@/lib/crm-dna';
+import { readEnv } from '@/lib/env';
 
 const STAGE_OK_CONTRATACAO_ID = 'cmplhpr8z0021qn012ni60tri';
 const TAG_NAME = 'Só contrato';

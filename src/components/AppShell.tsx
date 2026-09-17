@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Vagas próximas' },
   { href: '/candidaturas', label: 'Candidaturas' },
   { href: '/so-contrato', label: 'Só contrato' },
+  { href: '/origem', label: 'Origem' },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

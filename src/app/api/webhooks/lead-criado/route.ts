@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { CrmApiError } from '@/lib/crm-dna';
-import { getContactTrackingById, getContactTrackingByPhone } from '@/lib/crm-tracking';
+import { resolveCampaignLabelFromReferrer } from '@/origem/campaign-from-image';
+import { getContactTrackingById, getContactTrackingByPhone } from '@/origem/crm-tracking';
 import { normalizePhone } from '@/lib/phone';
-import { upsertTrackerLead } from '@/lib/supabase-server';
+import { updateTrackerLeadCampaign, upsertTrackerLead } from '@/lib/supabase-server';
 
 const ACCEPTED_EVENTS = new Set(['deal_created', 'contact_created']);
 
@@ -80,6 +81,17 @@ export async function POST(request: Request) {
       gclid: tracking.gclid,
       referrer: tracking.referrer,
     });
+
+    if (tracking.referrer) {
+      void resolveCampaignLabelFromReferrer(tracking.referrer, tracking.headline)
+        .then(async (label) => {
+          if (!label || label === tracking.campanha) return;
+          await updateTrackerLeadCampaign(telefoneNormalizado, label);
+        })
+        .catch((error) => {
+          console.warn('Falha ao nomear a campanha pela foto:', error);
+        });
+    }
 
     return NextResponse.json({
       success: true,

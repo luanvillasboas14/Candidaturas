@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { listActiveJobsForGeo } from '@/lib/supabase';
-import { listJobSchedulesByCodigo } from '@/lib/dna-work-hours';
-import { geocodeCep, haversineKm, normalizeCep } from '@/lib/geo';
+import { listJobSchedulesByCodigo } from '@/vagas-proximas/dna-work-hours';
+import { geocodeCep, haversineKm, normalizeCep } from '@/vagas-proximas/geo';
 import { JobContractType, NearbyJob } from '@/types/candidatura';
 
 const CONTRACT_TYPES: JobContractType[] = ['CLT', 'Estágio'];

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { CrmApiError } from '@/lib/crm-dna';
-import { createSoContratoDeals } from '@/lib/crm-so-contrato';
+import { createSoContratoDeals } from '@/so-contrato/crm-so-contrato';
 import { normalizePhone } from '@/lib/phone';
 
 interface CandidatoInput {
