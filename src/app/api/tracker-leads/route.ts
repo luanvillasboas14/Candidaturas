@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { campaignDisplayName } from '@/origem/campaign-label';
+import { clampOrigemRange } from '@/origem/date-range';
 import { listTrackerLeads } from '@/lib/supabase-server';
 
 function label(value: string | null | undefined, empty: string): string {
@@ -15,8 +16,10 @@ function readDate(value: string | null): string | null {
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const from = readDate(url.searchParams.get('from'));
-    const to = readDate(url.searchParams.get('to'));
+    const { from, to } = clampOrigemRange(
+      readDate(url.searchParams.get('from')),
+      readDate(url.searchParams.get('to'))
+    );
     const rows = await listTrackerLeads({ from, to });
     const total = rows.length;
 

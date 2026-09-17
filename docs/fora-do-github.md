@@ -22,6 +22,7 @@ Este arquivo lista o que o app usa e **não vive neste repositório**.
 - API: `https://integrations.bwipo.com` com Bearer `CRM_DNA_API_TOKEN`. Não usar `bwipo.com`, `api.bwipo.com` nem `frontend-front.v74knz.easypanel.host`.
 - Evento `deal_created` (automação/webhook) deve apontar para `https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/webhooks/lead-criado`.
 - Campo `source` do contato vira `origem` (ex.: Instagram, Facebook, Dina Bwipo).
+- Campo de negócio `campanha` (slug `campanha`) recebe o rótulo lido da arte.
 
 ## DNA Work (horários)
 - `https://sistema.dnawork.ai/webhook/empresa.php` — horários das vagas, cruzados pelo `codigo` da tabela `jobs`.

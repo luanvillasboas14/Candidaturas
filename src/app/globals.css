@@ -26,6 +26,7 @@
   --drop-bg: rgba(255, 255, 255, 0.1);
   --drop-border: rgba(230, 236, 255, 0.42);
   --drop-text: #e6ecff;
+  color-scheme: dark;
 }
 
 [data-theme='light'] {
@@ -56,6 +57,7 @@
   --drop-bg: #ffffff;
   --drop-border: rgba(13, 17, 33, 0.22);
   --drop-text: #1d1e4c;
+  color-scheme: light;
 }
 
 * {
@@ -82,7 +84,10 @@ body {
 }
 
 .sidebar {
+  position: sticky;
+  top: 0;
   width: 240px;
+  height: 100vh;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -101,7 +106,10 @@ body {
 .sidebar-nav {
   display: flex;
   flex-direction: column;
+  flex: 1;
   gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .sidebar-link {
@@ -126,8 +134,9 @@ body {
 
 .sidebar-footer {
   margin-top: auto;
+  flex-shrink: 0;
   display: flex;
-  justify-content: center;
+  justify-content: stretch;
   padding-top: 20px;
 }
 
@@ -166,6 +175,7 @@ body {
 
 .card-dashboard {
   max-width: 960px;
+  overflow: visible;
 }
 
 .card-dashboard h1,
@@ -190,9 +200,11 @@ body {
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 12px;
+  overflow: visible;
 }
 
-.origem-filters label {
+.origem-filters label,
+.origem-period {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -201,9 +213,10 @@ body {
   color: var(--text-muted);
 }
 
-.origem-filters input {
+.origem-filters input,
+.origem-period-trigger {
   min-height: 44px;
-  width: 148px;
+  width: 168px;
   padding: 8px 12px;
   border: 1px solid var(--input-border);
   border-radius: 12px;
@@ -212,16 +225,172 @@ body {
   font-weight: 700;
 }
 
-.origem-clear-dates {
-  min-height: 44px;
-  padding: 0 14px;
+.origem-period {
+  position: relative;
+}
+
+.origem-period-trigger {
+  width: 132px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  text-align: left;
+}
+
+.origem-period-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 6;
+  min-width: 100%;
+  padding: 6px;
   border: 1px solid var(--input-border);
   border-radius: 12px;
+  background: var(--dropdown-bg);
+  box-shadow: var(--shadow);
+  list-style: none;
+}
+
+.origem-period-menu button {
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.origem-period-menu button:hover,
+.origem-period-menu button[aria-selected='true'] {
+  background: var(--dropdown-hover);
+}
+
+.origem-date-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.origem-date-field {
+  position: relative;
+  width: 176px;
+}
+
+.origem-date-field input[type='text'] {
+  width: 100%;
+  padding-right: 42px;
+  cursor: pointer;
+}
+
+.origem-date-calendar {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.origem-calendar {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 20;
+  width: 280px;
+  padding: 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 14px;
+  background: #05070f;
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+}
+
+[data-theme='light'] .origem-calendar {
+  background: #ffffff;
+}
+
+.origem-calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.origem-calendar-head strong {
+  font-size: 0.8125rem;
+  text-transform: lowercase;
+}
+
+.origem-calendar-head button,
+.origem-calendar-foot button {
+  border: 0;
   background: transparent;
   color: var(--text-muted);
   font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.origem-calendar-week,
+.origem-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  text-align: center;
+}
+
+.origem-calendar-week span {
+  padding: 4px 0;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.origem-calendar-grid button {
+  min-height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.origem-calendar-grid button.outside {
+  color: var(--text-muted);
+  opacity: 0.45;
+}
+
+.origem-calendar-grid button.selected {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.origem-calendar-grid button:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
+.origem-calendar-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
 }
 
 .origem-kpi {
@@ -742,7 +911,11 @@ body {
   }
 
   .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 8;
     width: 100%;
+    height: auto;
     flex-direction: row;
     align-items: center;
     gap: 16px;
@@ -761,6 +934,16 @@ body {
   .sidebar-footer {
     margin-top: 0;
     padding-top: 0;
+  }
+
+  .theme-toggle {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .theme-toggle-label {
+    display: none;
   }
 
   .nearby-fields {
@@ -794,13 +977,17 @@ body {
 .theme-toggle {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
   border: 1px solid var(--card-border);
   border-radius: 12px;
   background: var(--input-bg);
   color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s, background 0.2s;
 }

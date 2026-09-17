@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { CrmApiError } from '@/lib/crm-dna';
+import { saveDealCampaign } from '@/origem/crm-deal-campaign';
 import { resolveCampaignLabelFromReferrer } from '@/origem/campaign-from-image';
 import { getContactTrackingById, getContactTrackingByPhone } from '@/origem/crm-tracking';
 import { normalizePhone } from '@/lib/phone';
@@ -25,15 +26,18 @@ function readText(...candidates: unknown[]): string | null {
 function parseWebhookBody(body: unknown): {
   event: string | null;
   contactId: string | null;
+  dealId: string | null;
   telefone: string | null;
 } {
   const root = asRecord(body) || {};
   const data = asRecord(root.data) || {};
   const contact = asRecord(root.contact) || asRecord(data.contact) || {};
+  const deal = asRecord(root.deal) || asRecord(data.deal) || {};
 
   return {
     event: readText(root.event),
     contactId: readText(root.contactId, data.contactId, contact.id),
+    dealId: readText(root.dealId, data.dealId, deal.id),
     telefone: readText(
       root.telefone,
       root.phone,
@@ -48,7 +52,7 @@ function parseWebhookBody(body: unknown): {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { event, contactId, telefone } = parseWebhookBody(body);
+    const { event, contactId, dealId, telefone } = parseWebhookBody(body);
 
     if (event && !ACCEPTED_EVENTS.has(event)) {
       return NextResponse.json({ success: true, ignored: true, event });
@@ -82,11 +86,26 @@ export async function POST(request: Request) {
       referrer: tracking.referrer,
     });
 
+    const dealTarget = {
+      telefone: telefoneRaw,
+      contactId,
+      dealId,
+    };
+
+    if (tracking.campanha) {
+      void saveDealCampaign({ ...dealTarget, campanha: tracking.campanha }).catch((error) => {
+        console.warn('Falha ao gravar a campanha no negócio:', error);
+      });
+    }
+
     if (tracking.referrer) {
       void resolveCampaignLabelFromReferrer(tracking.referrer, tracking.headline)
         .then(async (label) => {
-          if (!label || label === tracking.campanha) return;
-          await updateTrackerLeadCampaign(telefoneNormalizado, label);
+          if (!label) return;
+          if (label !== tracking.campanha) {
+            await updateTrackerLeadCampaign(telefoneNormalizado, label);
+          }
+          await saveDealCampaign({ ...dealTarget, campanha: label });
         })
         .catch((error) => {
           console.warn('Falha ao nomear a campanha pela foto:', error);
