@@ -27,10 +27,24 @@ export function haversineKm(from: Coordinates, to: Coordinates): number {
   return 2 * earthRadiusKm * Math.asin(Math.min(1, Math.sqrt(a)));
 }
 
-async function geocodeWithPhoton(query: string): Promise<Coordinates | null> {
+type PhotonFeature = {
+  geometry?: { coordinates?: unknown };
+  properties?: { postcode?: string };
+};
+
+function coordsFromPhotonFeature(feature: PhotonFeature | undefined): Coordinates | null {
+  const coords = feature?.geometry?.coordinates;
+  if (!Array.isArray(coords) || coords.length < 2) return null;
+  const lng = Number(coords[0]);
+  const lat = Number(coords[1]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
+}
+
+async function geocodeWithPhoton(query: string, cep?: string): Promise<Coordinates | null> {
   const url = new URL('https://photon.komoot.io/api/');
   url.searchParams.set('q', query);
-  url.searchParams.set('limit', '1');
+  url.searchParams.set('limit', '5');
 
   const response = await fetch(url.toString(), {
     headers: { 'User-Agent': 'CandidaturasDNAWork/1.0' },
@@ -41,23 +55,27 @@ async function geocodeWithPhoton(query: string): Promise<Coordinates | null> {
   }
 
   const data = await response.json();
-  const coords = data?.features?.[0]?.geometry?.coordinates;
-  if (!Array.isArray(coords) || coords.length < 2) {
-    return null;
+  const features: PhotonFeature[] = Array.isArray(data?.features) ? data.features : [];
+  if (features.length === 0) return null;
+
+  const cepDigits = cep?.replace(/\D/g, '') || '';
+  if (cepDigits.length === 8) {
+    const byCep = features.find(
+      (feature) => String(feature.properties?.postcode || '').replace(/\D/g, '') === cepDigits
+    );
+    const matched = coordsFromPhotonFeature(byCep);
+    if (matched) return matched;
   }
 
-  const lng = Number(coords[0]);
-  const lat = Number(coords[1]);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    return null;
-  }
-
-  return { lat, lng };
+  return coordsFromPhotonFeature(features[0]);
 }
 
-export async function geocodeAddress(address: string): Promise<Coordinates | null> {
-  const key = address.trim().toLowerCase();
-  if (!key) {
+export async function geocodeAddress(
+  address: string,
+  cep?: string
+): Promise<Coordinates | null> {
+  const key = `${address.trim().toLowerCase()}|${cep || ''}`;
+  if (!address.trim()) {
     return null;
   }
 
@@ -65,9 +83,9 @@ export async function geocodeAddress(address: string): Promise<Coordinates | nul
     return addressCache.get(key) ?? null;
   }
 
-  let coordinates = await geocodeWithPhoton(`${address}, Brasil`);
+  let coordinates = await geocodeWithPhoton(`${address}, Brasil`, cep);
   if (!coordinates) {
-    coordinates = await geocodeWithPhoton(address);
+    coordinates = await geocodeWithPhoton(address, cep);
   }
 
   addressCache.set(key, coordinates);
@@ -84,13 +102,20 @@ function parseCoordinates(latRaw: unknown, lngRaw: unknown): Coordinates | null 
   return { lat, lng };
 }
 
-function isGenericCityCenter(coords: Coordinates, city: string): boolean {
-  const cityKey = city
+function cityKey(city: string): string {
+  return city
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
-  return cityKey === 'sao paulo' && haversineKm(coords, SAO_PAULO_CITY_CENTER) < 1.5;
+}
+
+function isGenericCityCenter(coords: Coordinates, city: string): boolean {
+  return cityKey(city) === 'sao paulo' && haversineKm(coords, SAO_PAULO_CITY_CENTER) < 1.5;
+}
+
+function isUsableOrigin(coords: Coordinates | null, city: string): coords is Coordinates {
+  return Boolean(coords) && !isGenericCityCenter(coords as Coordinates, city);
 }
 
 async function geocodeCepAwesomeApi(cep: string): Promise<Coordinates | null> {
@@ -100,33 +125,67 @@ async function geocodeCepAwesomeApi(cep: string): Promise<Coordinates | null> {
   return parseCoordinates(data?.lat, data?.lng);
 }
 
-export async function geocodeCep(cep: string): Promise<Coordinates | null> {
+interface CepLookup {
+  street?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  coords: Coordinates | null;
+}
+
+async function lookupBrasilApi(cep: string): Promise<CepLookup | null> {
   const response = await fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`);
-  if (!response.ok) {
-    return geocodeCepAwesomeApi(cep);
-  }
-
+  if (!response.ok) return null;
   const data = await response.json();
-  const streetAddress = [data.street, data.neighborhood, data.city, data.state, 'Brasil']
-    .filter(Boolean)
-    .join(', ');
+  return {
+    street: typeof data.street === 'string' ? data.street : undefined,
+    neighborhood: typeof data.neighborhood === 'string' ? data.neighborhood : undefined,
+    city: typeof data.city === 'string' ? data.city : undefined,
+    state: typeof data.state === 'string' ? data.state : undefined,
+    coords: parseCoordinates(
+      data?.location?.coordinates?.latitude,
+      data?.location?.coordinates?.longitude
+    ),
+  };
+}
 
-  if (data.street) {
-    const fromStreet = await geocodeAddress(streetAddress);
-    if (fromStreet) return fromStreet;
+function formattedCep(cep: string): string {
+  return `${cep.slice(0, 5)}-${cep.slice(5)}`;
+}
+
+export async function geocodeCep(cep: string): Promise<Coordinates | null> {
+  const [brasil, awesome] = await Promise.all([lookupBrasilApi(cep), geocodeCepAwesomeApi(cep)]);
+  const city = brasil?.city || 'São Paulo';
+  const state = brasil?.state || 'SP';
+
+  if (isUsableOrigin(awesome, city)) {
+    return awesome;
   }
 
-  const fromAwesome = await geocodeCepAwesomeApi(cep);
-  if (fromAwesome) return fromAwesome;
+  const photonQueries = [
+    brasil?.street ? `${brasil.street}, ${city}, ${state}` : null,
+    `${formattedCep(cep)}, ${city}, ${state}`,
+    brasil?.street && brasil.neighborhood
+      ? `${brasil.street}, ${brasil.neighborhood}, ${city}, ${state}`
+      : null,
+  ].filter((query): query is string => Boolean(query));
 
-  const fromBrasilApi = parseCoordinates(
-    data?.location?.coordinates?.latitude,
-    data?.location?.coordinates?.longitude
-  );
-  if (fromBrasilApi && !isGenericCityCenter(fromBrasilApi, String(data.city || ''))) {
-    return fromBrasilApi;
+  for (const query of photonQueries) {
+    const fromPhoton = await geocodeAddress(query, cep);
+    if (isUsableOrigin(fromPhoton, city)) {
+      return fromPhoton;
+    }
   }
 
-  const cityAddress = [data.city, data.state, 'Brasil'].filter(Boolean).join(', ');
-  return cityAddress ? geocodeAddress(cityAddress) : null;
+  if (isUsableOrigin(brasil?.coords ?? null, city)) {
+    return brasil?.coords ?? null;
+  }
+
+  if (awesome) return awesome;
+
+  if (cityKey(city) === 'sao paulo') {
+    return null;
+  }
+
+  return geocodeAddress(`${city}, ${state}, Brasil`, cep);
 }
