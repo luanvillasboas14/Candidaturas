@@ -5,6 +5,7 @@ import { getInfojobsDealTracking } from '@/origem/crm-deal-origin';
 import { resolveCampaignLabelFromReferrer } from '@/origem/campaign-from-image';
 import { getContactTrackingById, getContactTrackingByPhone } from '@/origem/crm-tracking';
 import type { ContactTracking } from '@/origem/crm-tracking';
+import { decodeHtmlEntities } from '@/origem/campaign-label';
 import { isAdsOrigem, mergeLeadTracking } from '@/origem/lead-origin';
 import { normalizePhone } from '@/lib/phone';
 import {
@@ -145,12 +146,15 @@ export async function POST(request: Request) {
       )
     );
 
+    const campanha = decodeHtmlEntities(tracking.campanha) || tracking.campanha;
+    const headline = decodeHtmlEntities(tracking.headline) || tracking.headline;
+
     await upsertTrackerLead({
       telefone: telefoneRaw,
       telefone_normalizado: telefoneNormalizado,
       origem: tracking.origem,
-      campanha: tracking.campanha,
-      headline: tracking.headline,
+      campanha,
+      headline,
       ctwa_clid: tracking.ctwa_clid,
       fbclid: tracking.fbclid,
       gclid: tracking.gclid,
@@ -164,17 +168,17 @@ export async function POST(request: Request) {
       origem: tracking.origem,
     };
 
-    if (tracking.campanha) {
-      void saveDealCampaign({ ...dealTarget, campanha: tracking.campanha }).catch((error) => {
+    if (campanha) {
+      void saveDealCampaign({ ...dealTarget, campanha }).catch((error) => {
         console.warn('Falha ao gravar a campanha no negócio:', error);
       });
     }
 
     if (tracking.referrer && isAdsOrigem(tracking.origem)) {
-      void resolveCampaignLabelFromReferrer(tracking.referrer, tracking.headline)
+      void resolveCampaignLabelFromReferrer(tracking.referrer, headline)
         .then(async (label) => {
           if (!label) return;
-          if (label !== tracking.campanha) {
+          if (label !== campanha) {
             await updateTrackerLeadCampaign(telefoneNormalizado, label);
           }
           await saveDealCampaign({ ...dealTarget, campanha: label });
@@ -191,8 +195,8 @@ export async function POST(request: Request) {
         telefone: telefoneRaw,
         telefone_normalizado: telefoneNormalizado,
         origem: tracking.origem,
-        campanha: tracking.campanha,
-        headline: tracking.headline,
+        campanha,
+        headline,
         ctwa_clid: tracking.ctwa_clid,
         fbclid: tracking.fbclid,
         gclid: tracking.gclid,

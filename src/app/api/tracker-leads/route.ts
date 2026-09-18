@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { campaignDisplayName } from '@/origem/campaign-label';
+import { campaignDisplayName, isNamedCampaign } from '@/origem/campaign-label';
 import { clampOrigemRange } from '@/origem/date-range';
 import { listTrackerLeads } from '@/lib/supabase-server';
 
@@ -31,6 +31,7 @@ export async function GET(request: Request) {
       origemCount.set(origem, (origemCount.get(origem) || 0) + 1);
 
       const campanha = campaignDisplayName(row.campanha, row.headline);
+      if (!isNamedCampaign(campanha)) continue;
       const campanhaKey = `${origem}||${campanha}`;
       campanhaCount.set(campanhaKey, (campanhaCount.get(campanhaKey) || 0) + 1);
     }

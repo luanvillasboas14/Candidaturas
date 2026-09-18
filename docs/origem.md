@@ -3,11 +3,11 @@
 Rota da tela: `/origem`.
 
 ## O que faz
-Dashboard da origem dos leads na tabela `tracker_leads`: total, pizza por canal e campanhas. Filtro por período (7 dias ao abrir, no máximo 3 meses) e datas `dd/mm/aaaa` no horário de Brasília, digitadas ou escolhidas no calendário. O percentual aparece no tooltip ao passar o mouse na fatia.
+Dashboard da origem dos leads na tabela `tracker_leads`: total, pizza por canal e campanhas. Filtro por período (7 dias ao abrir, no máximo 3 meses) e datas `dd/mm/aaaa` no horário de Brasília, digitadas ou escolhidas no calendário. O percentual aparece no tooltip ao passar o mouse na fatia. A lista de campanhas omite “Sem campanha”; cada vaga do Infojobs e cada arte de Instagram/Facebook entra como uma campanha.
 
 A gravação na tabela não acontece na candidatura. O CRM (ou o n8n, se apontar para cá) chama o webhook exclusivo na criação do lead.
 
-Leads ativados pelo Scraping Pandapé (comando `/infojobs`) entram no CRM pelo WhatsApp, sem referrer de anúncio. O n8n deve chamar o mesmo webhook com `origem: infojobs` e `campanha` igual ao nome da vaga. Se o negócio já tiver a tag Infojobs ou a nota `Candidato via Infojobs — vaga: …`, o webhook também preenche sozinho. Origem de anúncio (Instagram/Facebook/Google/TikTok) não é sobrescrita; `infojobs` ganha de `whatsapp`, `Dina Bwipo` e vazio.
+Leads ativados pelo Scraping Pandapé (comando `/infojobs`) entram no CRM pelo WhatsApp, sem referrer de anúncio. O n8n deve chamar o mesmo webhook com `origem: infojobs` e `campanha` igual ao nome da vaga. Se o negócio já tiver a tag Infojobs ou a nota `Candidato via Infojobs — vaga: …`, o webhook também preenche sozinho. Origem de anúncio (Instagram/Facebook/Google/TikTok) não é sobrescrita; `infojobs` ganha de `whatsapp`, `Dina Bwipo` e vazio. Acentos que o Pandapé manda como `&#xE1;` são decodificados antes de gravar na tabela e no CRM.
 
 `campanha` no dashboard não usa o ID da Meta nem o shortcode do Instagram. O webhook baixa a foto do `referrer` (Facebook `og:image` / Instagram `/media/`), lê o texto com Tesseract local (`tessdata/`) e grava um rótulo do tipo `Operador de Loja, Zona Norte`. O mesmo texto vai para o campo `campanha` do negócio no CRM DNA. Enquanto isso, a API do dashboard usa o `headline` se `campanha` ainda for um ID.
 
@@ -16,7 +16,7 @@ Leads ativados pelo Scraping Pandapé (comando `/infojobs`) entram no CRM pelo W
 - `src/origem/OrigemDashboard.tsx` — filtro, pizza e campanhas.
 - `src/origem/date-range.ts` — período padrão de 7 dias e teto de 3 meses.
 - `src/origem/crm-tracking.ts` — origem, campanha, headline e clids no CRM DNA.
-- `src/origem/campaign-label.ts` — decide o nome visível da campanha (ignora ID/shortcode).
+- `src/origem/campaign-label.ts` — decide o nome visível da campanha (ignora ID/shortcode) e decodifica acentos HTML do Pandapé.
 - `src/origem/campaign-from-image.ts` — baixa a foto do referrer, OCR e rótulo da campanha.
 - `src/origem/crm-deal-campaign.ts` — grava o rótulo no campo `campanha` do negócio no CRM.
 - `src/origem/lead-origin.ts` — Infojobs/Pandapé, prioridade de canais e merge com o que já está no tracker.

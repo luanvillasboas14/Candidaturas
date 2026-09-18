@@ -15,6 +15,30 @@ const CARGO_PATTERNS: RegExp[] = [
   /confeiteiro(?:a)?/i,
 ];
 
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+};
+
+export function decodeHtmlEntities(value?: string | null): string {
+  if (!value) return '';
+  return value
+    .replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => {
+      const code = Number.parseInt(hex, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+    })
+    .replace(/&#(\d+);/g, (match, dec) => {
+      const code = Number.parseInt(dec, 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+    })
+    .replace(/&([a-zA-Z]+);/g, (match, name) => NAMED_ENTITIES[name.toLowerCase()] ?? match)
+    .trim();
+}
+
 export function looksLikeMachineId(value: string | null | undefined): boolean {
   const trimmed = value?.trim();
   if (!trimmed) return true;
@@ -28,17 +52,24 @@ export function campaignDisplayName(
   campanha?: string | null,
   headline?: string | null
 ): string {
-  if (campanha && !looksLikeMachineId(campanha)) return campanha;
-  if (headline && !looksLikeMachineId(headline)) return headline;
-  if (campanha?.trim()) return campanha.trim();
+  const campanhaDecoded = decodeHtmlEntities(campanha);
+  const headlineDecoded = decodeHtmlEntities(headline);
+  if (campanhaDecoded && !looksLikeMachineId(campanhaDecoded)) return campanhaDecoded;
+  if (headlineDecoded && !looksLikeMachineId(headlineDecoded)) return headlineDecoded;
+  if (campanhaDecoded) return campanhaDecoded;
   return 'Sem campanha';
+}
+
+export function isNamedCampaign(name?: string | null): boolean {
+  const trimmed = name?.trim();
+  return Boolean(trimmed) && trimmed !== 'Sem campanha';
 }
 
 export function firstHumanCampaign(
   ...values: Array<string | null | undefined>
 ): string | null {
   for (const value of values) {
-    const trimmed = value?.trim();
+    const trimmed = decodeHtmlEntities(value);
     if (trimmed && !looksLikeMachineId(trimmed)) return trimmed;
   }
   return null;

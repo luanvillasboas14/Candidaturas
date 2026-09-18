@@ -509,17 +509,21 @@ export function OrigemDashboard() {
 
           <section>
             <h2>Campanhas</h2>
-            <ul className="origem-campaigns">
-              {data.campanhas.map((item) => (
-                <li key={`${item.origem}-${item.campanha}`}>
-                  <div>
-                    <strong>{item.campanha}</strong>
-                    <span>{item.origem}</span>
-                  </div>
-                  <em>{item.quantidade}</em>
-                </li>
-              ))}
-            </ul>
+            {data.campanhas.length === 0 ? (
+              <p className="subtitle">Nenhuma campanha nomeada nesse período.</p>
+            ) : (
+              <ul className="origem-campaigns">
+                {data.campanhas.map((item) => (
+                  <li key={`${item.origem}-${item.campanha}`}>
+                    <div>
+                      <strong>{item.campanha}</strong>
+                      <span>{item.origem}</span>
+                    </div>
+                    <em>{item.quantidade}</em>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </>
       )}
