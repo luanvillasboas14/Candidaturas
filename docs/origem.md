@@ -17,6 +17,7 @@ Leads ativados pelo Scraping Pandapé (comando `/infojobs`) entram no CRM pelo W
 - `src/origem/date-range.ts` — período padrão de 7 dias e teto de 3 meses.
 - `src/origem/crm-tracking.ts` — origem, campanha, headline e clids no CRM DNA.
 - `src/origem/campaign-label.ts` — decide o nome visível da campanha (ignora ID/shortcode) e decodifica acentos HTML do Pandapé.
+- `src/origem/infojobs-vacancies.ts` — cruza `Infojobs {id}` com o nome da vaga lido no scraping.
 - `src/origem/campaign-from-image.ts` — baixa a foto do referrer, OCR e rótulo da campanha.
 - `src/origem/crm-deal-campaign.ts` — grava o rótulo no campo `campanha` do negócio no CRM.
 - `src/origem/lead-origin.ts` — Infojobs/Pandapé, prioridade de canais e merge com o que já está no tracker.

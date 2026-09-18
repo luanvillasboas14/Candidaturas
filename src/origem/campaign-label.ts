@@ -1,3 +1,5 @@
+import { infojobsVacancyId, titleForInfojobsId } from './infojobs-vacancies';
+
 const SMALL_WORDS = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
 
 const CARGO_PATTERNS: RegExp[] = [
@@ -23,6 +25,12 @@ const NAMED_ENTITIES: Record<string, string> = {
   apos: "'",
   nbsp: ' ',
 };
+
+export function resolveInfojobsCampaign(value?: string | null): string {
+  const decoded = decodeHtmlEntities(value);
+  if (!decoded) return '';
+  return titleForInfojobsId(infojobsVacancyId(decoded)) || decoded;
+}
 
 export function decodeHtmlEntities(value?: string | null): string {
   if (!value) return '';
@@ -52,8 +60,8 @@ export function campaignDisplayName(
   campanha?: string | null,
   headline?: string | null
 ): string {
-  const campanhaDecoded = decodeHtmlEntities(campanha);
-  const headlineDecoded = decodeHtmlEntities(headline);
+  const campanhaDecoded = resolveInfojobsCampaign(campanha);
+  const headlineDecoded = resolveInfojobsCampaign(headline);
   if (campanhaDecoded && !looksLikeMachineId(campanhaDecoded)) return campanhaDecoded;
   if (headlineDecoded && !looksLikeMachineId(headlineDecoded)) return headlineDecoded;
   if (campanhaDecoded) return campanhaDecoded;
@@ -69,7 +77,7 @@ export function firstHumanCampaign(
   ...values: Array<string | null | undefined>
 ): string | null {
   for (const value of values) {
-    const trimmed = decodeHtmlEntities(value);
+    const trimmed = resolveInfojobsCampaign(value);
     if (trimmed && !looksLikeMachineId(trimmed)) return trimmed;
   }
   return null;

@@ -5,7 +5,7 @@ import { getInfojobsDealTracking } from '@/origem/crm-deal-origin';
 import { resolveCampaignLabelFromReferrer } from '@/origem/campaign-from-image';
 import { getContactTrackingById, getContactTrackingByPhone } from '@/origem/crm-tracking';
 import type { ContactTracking } from '@/origem/crm-tracking';
-import { decodeHtmlEntities } from '@/origem/campaign-label';
+import { resolveInfojobsCampaign } from '@/origem/campaign-label';
 import { isAdsOrigem, mergeLeadTracking } from '@/origem/lead-origin';
 import { normalizePhone } from '@/lib/phone';
 import {
@@ -146,8 +146,8 @@ export async function POST(request: Request) {
       )
     );
 
-    const campanha = decodeHtmlEntities(tracking.campanha) || tracking.campanha;
-    const headline = decodeHtmlEntities(tracking.headline) || tracking.headline;
+    const campanha = resolveInfojobsCampaign(tracking.campanha) || tracking.campanha;
+    const headline = resolveInfojobsCampaign(tracking.headline) || tracking.headline;
 
     await upsertTrackerLead({
       telefone: telefoneRaw,
