@@ -18,11 +18,34 @@ Este arquivo lista o que o app usa e **não vive neste repositório**.
 - `https://dnaworkia-n8n.vkfaze.easypanel.host/webhook/criacaocandidaturas` — o app chama após INSERT de candidatura (POST com candidatura + `contact_name` + `total_candidaturas` + `outras_candidaturas`).
 - Automação de lead pode chamar o webhook de origem do app com `{ "telefone": "..." }`.
 
+### Scraping Pandapé (`/infojobs`)
+O fluxo principal (workflow `4tYpT10DgQR8dYdr`) só dispara WhatsApp. Quem responde entra no CRM como WhatsApp, sem campanha. Depois do envio com sucesso no node **dedup+WhatsApp**, gravar a origem:
+
+```javascript
+await helpers.httpRequest({
+  method: 'POST',
+  url: 'https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/webhooks/lead-criado',
+  headers: { 'Content-Type': 'application/json' },
+  body: {
+    telefone: registro.telefone,
+    origem: 'infojobs',
+    campanha: registro.vacancyTitle || (registro.idvacancy ? 'Infojobs ' + registro.idvacancy : 'Infojobs'),
+  },
+  json: true,
+  ignoreHttpStatusErrors: true,
+});
+```
+
+No fluxo que já cria negócio + tag Infojobs + nota `Candidato via Infojobs — vaga: …`, o app também detecta a tag `cmrkrdkyh1gytpn01ae77p55q` no `deal_created`. Mesmo assim vale o POST acima depois da tag, com `contactId` e `dealId` se existirem.
+
+No lote da checagem de 2h, incluir `vacancyTitle` (hoje vai só `idvacancy`) para o node **Taguear Infojobs** poder mandar o mesmo POST como rede de segurança.
+
 ## CRM DNA
 - API: `https://integrations.bwipo.com` com Bearer `CRM_DNA_API_TOKEN`. Não usar `bwipo.com`, `api.bwipo.com` nem `frontend-front.v74knz.easypanel.host`.
 - Evento `deal_created` (automação/webhook) deve apontar para `https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/webhooks/lead-criado`.
-- Campo `source` do contato vira `origem` (ex.: Instagram, Facebook, Dina Bwipo).
-- Campo de negócio `campanha` (slug `campanha`) recebe o rótulo lido da arte.
+- Campo `source` do contato vira `origem` (ex.: Instagram, Facebook, Dina Bwipo, infojobs).
+- Campo de negócio `campanha` (slug `campanha`) recebe o rótulo lido da arte ou o nome da vaga do Pandapé.
+- Tag de negócio **Infojobs** (`cmrkrdkyh1gytpn01ae77p55q`) e nota `Candidato via Infojobs` marcam origem `infojobs`.
 
 ## DNA Work (horários)
 - `https://sistema.dnawork.ai/webhook/empresa.php` — horários das vagas, cruzados pelo `codigo` da tabela `jobs`.

@@ -73,6 +73,35 @@ export async function countOtherCandidaturas(
   return count || 0;
 }
 
+export interface TrackerLeadRecord {
+  id: string;
+  telefone: string;
+  telefone_normalizado: string;
+  origem: string | null;
+  campanha: string | null;
+  headline: string | null;
+  ctwa_clid: string | null;
+  fbclid: string | null;
+  gclid: string | null;
+  referrer: string | null;
+}
+
+export async function getTrackerLeadByPhone(
+  telefoneNormalizado: string
+): Promise<TrackerLeadRecord | null> {
+  const { data, error } = await getSupabaseServer()
+    .from('tracker_leads')
+    .select(
+      'id, telefone, telefone_normalizado, origem, campanha, headline, ctwa_clid, fbclid, gclid, referrer'
+    )
+    .eq('telefone_normalizado', telefoneNormalizado)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
 export async function upsertTrackerLead(input: {
   telefone: string;
   telefone_normalizado: string;

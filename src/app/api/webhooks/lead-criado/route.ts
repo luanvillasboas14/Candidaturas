@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server';
 import { CrmApiError } from '@/lib/crm-dna';
 import { saveDealCampaign } from '@/origem/crm-deal-campaign';
+import { getInfojobsDealTracking } from '@/origem/crm-deal-origin';
 import { resolveCampaignLabelFromReferrer } from '@/origem/campaign-from-image';
 import { getContactTrackingById, getContactTrackingByPhone } from '@/origem/crm-tracking';
+import type { ContactTracking } from '@/origem/crm-tracking';
+import { isAdsOrigem, mergeLeadTracking } from '@/origem/lead-origin';
 import { normalizePhone } from '@/lib/phone';
-import { updateTrackerLeadCampaign, upsertTrackerLead } from '@/lib/supabase-server';
+import {
+  getTrackerLeadByPhone,
+  updateTrackerLeadCampaign,
+  upsertTrackerLead,
+} from '@/lib/supabase-server';
 
 const ACCEPTED_EVENTS = new Set(['deal_created', 'contact_created']);
 
@@ -28,6 +35,8 @@ function parseWebhookBody(body: unknown): {
   contactId: string | null;
   dealId: string | null;
   telefone: string | null;
+  origem: string | null;
+  campanha: string | null;
 } {
   const root = asRecord(body) || {};
   const data = asRecord(root.data) || {};
@@ -46,33 +55,95 @@ function parseWebhookBody(body: unknown): {
       contact.telefone,
       contact.phone
     ),
+    origem: readText(root.origem, root.source, data.origem, data.source),
+    campanha: readText(root.campanha, root.campaign, data.campanha, data.campaign),
+  };
+}
+
+function trackingFromRow(
+  row: {
+    origem: string | null;
+    campanha: string | null;
+    headline: string | null;
+    ctwa_clid: string | null;
+    fbclid: string | null;
+    gclid: string | null;
+    referrer: string | null;
+  } | null
+): ContactTracking | null {
+  if (!row) return null;
+  return {
+    origem: row.origem,
+    campanha: row.campanha,
+    headline: row.headline,
+    ctwa_clid: row.ctwa_clid,
+    fbclid: row.fbclid,
+    gclid: row.gclid,
+    referrer: row.referrer,
   };
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { event, contactId, dealId, telefone } = parseWebhookBody(body);
+    const parsed = parseWebhookBody(body);
+    const {
+      event,
+      contactId,
+      dealId,
+      telefone,
+      origem: origemInformada,
+      campanha: campanhaInformada,
+    } = parsed;
 
     if (event && !ACCEPTED_EVENTS.has(event)) {
       return NextResponse.json({ success: true, ignored: true, event });
     }
 
-    const tracking = contactId
-      ? await getContactTrackingById(contactId)
-      : telefone
-        ? await getContactTrackingByPhone(telefone)
-        : null;
+    let crmTracking: ContactTracking & { telefone?: string } | null = null;
+    try {
+      crmTracking = contactId
+        ? await getContactTrackingById(contactId)
+        : telefone
+          ? await getContactTrackingByPhone(telefone)
+          : null;
+    } catch (error) {
+      if (!telefone || !(origemInformada || campanhaInformada)) throw error;
+      console.warn('CRM indisponível; gravando origem enviada no webhook:', error);
+    }
 
-    const telefoneRaw = tracking?.telefone || telefone || '';
+    const telefoneRaw = crmTracking?.telefone || telefone || '';
     const telefoneNormalizado = normalizePhone(telefoneRaw);
 
-    if (!tracking || !telefoneNormalizado) {
+    if (!telefoneNormalizado) {
       return NextResponse.json(
         { success: false, message: 'Não encontrei o telefone do lead no CRM.' },
         { status: 404 }
       );
     }
+
+    const [existing, infojobsTracking] = await Promise.all([
+      getTrackerLeadByPhone(telefoneNormalizado),
+      origemInformada || isAdsOrigem(crmTracking?.origem)
+        ? Promise.resolve(null)
+        : getInfojobsDealTracking({ dealId, contactId }),
+    ]);
+
+    const tracking = mergeLeadTracking(
+      trackingFromRow(existing),
+      mergeLeadTracking(
+        mergeLeadTracking(crmTracking, infojobsTracking),
+        {
+          origem: origemInformada,
+          campanha: campanhaInformada,
+          headline: null,
+          ctwa_clid: null,
+          fbclid: null,
+          gclid: null,
+          referrer: null,
+        }
+      )
+    );
 
     await upsertTrackerLead({
       telefone: telefoneRaw,
@@ -90,6 +161,7 @@ export async function POST(request: Request) {
       telefone: telefoneRaw,
       contactId,
       dealId,
+      origem: tracking.origem,
     };
 
     if (tracking.campanha) {
@@ -98,7 +170,7 @@ export async function POST(request: Request) {
       });
     }
 
-    if (tracking.referrer) {
+    if (tracking.referrer && isAdsOrigem(tracking.origem)) {
       void resolveCampaignLabelFromReferrer(tracking.referrer, tracking.headline)
         .then(async (label) => {
           if (!label) return;

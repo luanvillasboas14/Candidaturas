@@ -1,5 +1,6 @@
 import { crmRequest } from '@/lib/crm-dna';
 import { firstHumanCampaign } from './campaign-label';
+import { canonicalOrigem } from './lead-origin';
 
 export interface ContactTracking {
   origem: string | null;
@@ -58,8 +59,11 @@ export function detectOrigem(input: {
   }
   if (blob.includes('google') || blob.includes('gclid') || input.gclid) return 'google';
   if (blob.includes('tiktok') || input.ttadId) return 'tiktok';
+  if (blob.includes('infojobs') || blob.includes('pandape') || blob.includes('pandapé')) {
+    return 'infojobs';
+  }
   if (blob.includes('whatsapp')) return 'whatsapp';
-  return text(input.source);
+  return canonicalOrigem(input.source) || text(input.source);
 }
 
 function toTracking(contact: CrmContactTracking): ContactTracking {

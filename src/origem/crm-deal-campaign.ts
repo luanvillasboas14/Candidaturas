@@ -57,6 +57,7 @@ async function findDealToUpdate(input: {
 export async function saveDealCampaign(input: {
   telefone: string;
   campanha: string;
+  origem?: string | null;
   contactId?: string | null;
   dealId?: string | null;
 }): Promise<void> {
@@ -74,10 +75,15 @@ export async function saveDealCampaign(input: {
     return;
   }
 
+  const origem = input.origem?.trim();
+
   await crmRequest('/api/leads', {
     method: 'POST',
     body: JSON.stringify({
-      contact: { phone: telefone },
+      contact: {
+        phone: telefone,
+        ...(origem ? { source: origem } : {}),
+      },
       deal: {
         stageId: deal.stageId,
         customFields: [{ name: CAMPAIGN_FIELD, value: campanha }],
