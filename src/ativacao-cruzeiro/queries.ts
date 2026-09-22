@@ -317,7 +317,7 @@ export async function listarAlunosAtivacao(input: FiltrosAtivacao): Promise<{
   alunos: AlunoCruzeiro[];
 }> {
   const filtros = normalizeFiltros(input);
-  if (!temFiltroAtivo(filtros)) {
+  if (!temFiltroAtivo(input)) {
     return { total: 0, page: filtros.page, pageSize: filtros.pageSize, alunos: [] };
   }
 
