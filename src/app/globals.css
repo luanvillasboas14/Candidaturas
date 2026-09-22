@@ -1085,6 +1085,47 @@ textarea:disabled {
   cursor: not-allowed;
 }
 
+select option {
+  background-color: #111827;
+  color: #e6ecff;
+}
+
+[data-theme='light'] select option {
+  background-color: #ffffff;
+  color: #1d1e4c;
+}
+
+.ativacao-select {
+  position: relative;
+}
+
+.ativacao-select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--input-border);
+  border-radius: 14px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 0.9375rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ativacao-select-trigger span {
+  color: var(--text-muted);
+}
+
+.ativacao-select-trigger:focus {
+  border-color: var(--accent);
+  background: var(--input-focus-bg);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  outline: none;
+}
+
 .hint {
   font-size: 0.75rem;
   color: var(--text-muted);
@@ -1187,6 +1228,166 @@ textarea:disabled {
 
 .submit-button:active:not(:disabled) {
   transform: translateY(0);
+}
+
+.ativacao-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.ativacao-age {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.ativacao-age span {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ativacao-required-tip {
+  position: absolute;
+  left: 12px;
+  top: calc(100% + 6px);
+  z-index: 8;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: #fff;
+  color: #202124;
+  font-size: 0.75rem;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.ativacao-required-tip::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  bottom: 100%;
+  border: 6px solid transparent;
+  border-bottom-color: #fff;
+}
+
+.ativacao-resumo {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(160px, 240px) auto;
+  gap: 16px;
+  align-items: end;
+  margin-top: 32px;
+}
+
+.ativacao-resumo .origem-kpi {
+  max-width: none;
+}
+
+.ativacao-resumo .field {
+  margin: 0;
+}
+
+.ativacao-resumo .ativacao-page-btn {
+  height: 46px;
+  padding: 0 16px;
+  transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+}
+
+.ativacao-resumo .ativacao-page-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+.ativacao-resumo .ativacao-page-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.ativacao-resumo + .ativacao-list,
+.ativacao-resumo + .subtitle {
+  margin-top: 32px;
+}
+
+.ativacao-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ativacao-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--input-bg);
+}
+
+.ativacao-list li.selected {
+  background: var(--selected-bg);
+  outline: 1px solid var(--selected-border);
+}
+
+.ativacao-list strong {
+  display: block;
+  font-size: 0.875rem;
+}
+
+.ativacao-list span,
+.ativacao-list em {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.ativacao-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ativacao-pager div {
+  display: flex;
+  gap: 8px;
+}
+
+.ativacao-page-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ativacao-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 800px) {
+  .ativacao-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .ativacao-resumo {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
 }
 
 .submit-button:disabled {

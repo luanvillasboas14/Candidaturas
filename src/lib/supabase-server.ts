@@ -188,3 +188,152 @@ export async function listTrackerLeads(range?: {
   if (error) throw error;
   return (data || []) as TrackerLeadRow[];
 }
+
+export type AlunoCepRow = {
+  rgm: string;
+  telefone: string;
+  cep: string | null;
+  bairro: string | null;
+  lat: number | null;
+  lng: number | null;
+};
+
+export async function countAlunosCep(): Promise<number> {
+  const { count, error } = await getSupabaseServer()
+    .from('alunos_cep')
+    .select('*', { count: 'exact', head: true });
+  if (error) throw error;
+  return count || 0;
+}
+
+export async function listAlunosCepLocalizacoes(): Promise<
+  Array<{ telefone: string; bairro: string | null; lat: number | null; lng: number | null }>
+> {
+  const rows: Array<{ telefone: string; bairro: string | null; lat: number | null; lng: number | null }> =
+    [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await getSupabaseServer()
+      .from('alunos_cep')
+      .select('telefone, bairro, lat, lng')
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data?.length) break;
+    rows.push(
+      ...data.map((row) => ({
+        telefone: row.telefone,
+        bairro: row.bairro,
+        lat: row.lat == null ? null : Number(row.lat),
+        lng: row.lng == null ? null : Number(row.lng),
+      }))
+    );
+    if (data.length < pageSize) break;
+  }
+  return rows;
+}
+
+export async function listAlunosCepTelefones(): Promise<string[]> {
+  const telefones: string[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await getSupabaseServer()
+      .from('alunos_cep')
+      .select('telefone')
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data?.length) break;
+    telefones.push(...data.map((row) => row.telefone));
+    if (data.length < pageSize) break;
+  }
+  return telefones;
+}
+
+export async function upsertAlunosCep(rows: AlunoCepRow[]): Promise<void> {
+  if (!rows.length) return;
+  const { error } = await getSupabaseServer().from('alunos_cep').upsert(
+    rows.map((row) => ({
+      ...row,
+      updated_at: new Date().toISOString(),
+    })),
+    { onConflict: 'telefone' }
+  );
+  if (error) throw error;
+}
+
+export async function listTelefonesComVagaEnviada(vagaId: string): Promise<string[]> {
+  const telefones: string[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await getSupabaseServer()
+      .from('alunos_cep')
+      .select('telefone')
+      .contains('vaga_enviada', [vagaId])
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data?.length) break;
+    telefones.push(...data.map((row) => row.telefone));
+    if (data.length < pageSize) break;
+  }
+  return telefones;
+}
+
+export async function appendVagaEnviada(
+  alunos: Array<{ rgm: string; telefone: string }>,
+  vagaId: string
+): Promise<number> {
+  const unicos = new Map<string, string>();
+  for (const aluno of alunos) {
+    if (!aluno.telefone || unicos.has(aluno.telefone)) continue;
+    unicos.set(aluno.telefone, aluno.rgm);
+  }
+  if (!unicos.size) return 0;
+
+  const telefones = [...unicos.keys()];
+  const atuais = new Map<string, string[]>();
+  const pageSize = 200;
+  for (let i = 0; i < telefones.length; i += pageSize) {
+    const chunk = telefones.slice(i, i + pageSize);
+    const { data, error } = await getSupabaseServer()
+      .from('alunos_cep')
+      .select('telefone, rgm, vaga_enviada')
+      .in('telefone', chunk);
+    if (error) throw error;
+    for (const row of data || []) {
+      atuais.set(row.telefone, Array.isArray(row.vaga_enviada) ? row.vaga_enviada : []);
+      if (row.rgm) unicos.set(row.telefone, row.rgm);
+    }
+  }
+
+  const rows = telefones.map((telefone) => {
+    const atuaisVagas = atuais.get(telefone) || [];
+    return {
+      rgm: unicos.get(telefone) || telefone,
+      telefone,
+      vaga_enviada: atuaisVagas.includes(vagaId) ? atuaisVagas : [...atuaisVagas, vagaId],
+      updated_at: new Date().toISOString(),
+    };
+  });
+
+  const { error } = await getSupabaseServer()
+    .from('alunos_cep')
+    .upsert(rows, { onConflict: 'telefone' });
+  if (error) throw error;
+  return rows.length;
+}
+
+export async function deleteAlunosCepByTelefones(telefones: string[]): Promise<number> {
+  if (!telefones.length) return 0;
+  let removed = 0;
+  const pageSize = 200;
+  for (let i = 0; i < telefones.length; i += pageSize) {
+    const chunk = telefones.slice(i, i + pageSize);
+    const { data, error } = await getSupabaseServer()
+      .from('alunos_cep')
+      .delete()
+      .in('telefone', chunk)
+      .select('telefone');
+    if (error) throw error;
+    removed += data?.length || 0;
+  }
+  return removed;
+}

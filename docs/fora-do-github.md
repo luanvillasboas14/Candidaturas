@@ -7,11 +7,14 @@ Este arquivo lista o que o app usa e **não vive neste repositório**.
 - O EasyPanel usa source **Docker Image** `ghcr.io/luanvillasboas14/candidaturas:latest` (sem Nixpacks).
 - Porta **3000**. Start command vazio (entrypoint da imagem). `docker-entrypoint.sh` força `HOSTNAME=0.0.0.0`.
 - Variáveis de ambiente do app ficam só no EasyPanel. No GitHub, o secret é só `EASYPANEL_DEPLOY_WEBHOOK`.
+- Ativação Cruzeiro lê o Postgres `dcz_sync` com `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS` e `DB_NAME`. Essas chaves vão no EasyPanel, nunca no GitHub.
+- Sync de localização: `POST https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/ativacao-cruzeiro/geo-sync`. A tela também dispara se o snapshot de matriculados for novo. Um cron diário depois das 12h (Brasília) cobre o upload do dia.
 - App em produção: `https://dnaworkia-candidaturas.vkfaze.easypanel.host`
 
 ## Supabase DNA
 - Projeto `moemgftlmncdqfvzscmq`. As migrations em `sql/` são executadas no SQL Editor, não no deploy.
-- Tabelas usadas: `jobs`, `jobs_enriched`, `candidaturas`, `tracker_leads`.
+- Tabelas usadas: `jobs`, `jobs_enriched`, `candidaturas`, `tracker_leads`, `alunos_cep`.
+- `alunos_cep.vaga_enviada` (`text[]`): IDs das vagas já enviadas na Ativação Cruzeiro. Rodar `sql/migration_alunos_cep_vaga_enviada.sql` no SQL Editor.
 - Webhook do Supabase (se ainda estiver ativo) dispara o n8n para preencher `deal_candidatura_id` depois da candidatura.
 
 ## n8n

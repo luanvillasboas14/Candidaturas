@@ -41,7 +41,16 @@ function coordsFromPhotonFeature(feature: PhotonFeature | undefined): Coordinate
   return { lat, lng };
 }
 
+let lastPhotonAt = 0;
+
+export async function waitPhotonSlot() {
+  const wait = 1100 - (Date.now() - lastPhotonAt);
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+  lastPhotonAt = Date.now();
+}
+
 async function geocodeWithPhoton(query: string, cep?: string): Promise<Coordinates | null> {
+  await waitPhotonSlot();
   const url = new URL('https://photon.komoot.io/api/');
   url.searchParams.set('q', query);
   url.searchParams.set('limit', '5');
