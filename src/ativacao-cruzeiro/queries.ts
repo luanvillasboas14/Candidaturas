@@ -274,40 +274,40 @@ async function aplicarLocalizacao(
   }
 
   const termoBairro = bairro ? fold(bairro) : '';
+  const filtrados: AlunoCruzeiro[] = [];
 
-  return alunos
-    .map((row) => {
-      const telefone = telefoneAluno(row);
-      const geo = telefone ? porTelefone.get(telefone) : undefined;
-      const bairroAluno = geo?.bairro || row.bairro || '';
-      const distanciaKm =
-        origem && geo?.lat != null && geo.lng != null
-          ? Number(haversineKm(origem, { lat: geo.lat, lng: geo.lng }).toFixed(1))
-          : null;
+  for (const row of alunos) {
+    const telefone = telefoneAluno(row);
+    const geo = telefone ? porTelefone.get(telefone) : undefined;
+    const bairroAluno = geo?.bairro || row.bairro || '';
+    const distanciaKm =
+      origem && geo?.lat != null && geo.lng != null
+        ? Number(haversineKm(origem, { lat: geo.lat, lng: geo.lng }).toFixed(1))
+        : null;
 
-      if (termoBairro && !fold(bairroAluno).includes(termoBairro)) return null;
-      if (origem && raioKm != null && (distanciaKm == null || distanciaKm > raioKm)) return null;
+    if (termoBairro && !fold(bairroAluno).includes(termoBairro)) continue;
+    if (origem && raioKm != null && (distanciaKm == null || distanciaKm > raioKm)) continue;
 
-      return {
-        pessoaId: row.pessoaId,
-        nome: row.nome,
-        curso: row.curso,
-        serie: row.serie,
-        idade: row.idade,
-        polo: row.polo,
-        celular: row.celular,
-        telefone: telefone || '',
-        bairro: bairroAluno,
-        distanciaKm,
-      };
-    })
-    .filter((aluno): aluno is AlunoCruzeiro => Boolean(aluno))
-    .sort((a, b) => {
-      if (a.distanciaKm != null && b.distanciaKm != null && a.distanciaKm !== b.distanciaKm) {
-        return a.distanciaKm - b.distanciaKm;
-      }
-      return a.nome.localeCompare(b.nome, 'pt-BR');
+    filtrados.push({
+      pessoaId: row.pessoaId,
+      nome: row.nome,
+      curso: row.curso,
+      serie: row.serie,
+      idade: row.idade,
+      polo: row.polo,
+      celular: row.celular,
+      telefone: telefone || '',
+      bairro: bairroAluno,
+      distanciaKm,
     });
+  }
+
+  return filtrados.sort((a, b) => {
+    if (a.distanciaKm != null && b.distanciaKm != null && a.distanciaKm !== b.distanciaKm) {
+      return a.distanciaKm - b.distanciaKm;
+    }
+    return a.nome.localeCompare(b.nome, 'pt-BR');
+  });
 }
 
 export async function listarAlunosAtivacao(input: FiltrosAtivacao): Promise<{
