@@ -18,6 +18,7 @@ function readNumber(value: unknown): number | undefined {
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
+    const status = url.searchParams.get('status') || undefined;
     const data = await listarCandidatos({
       nome: readText(url.searchParams.get('nome')),
       cadastroDe: readText(url.searchParams.get('cadastroDe')),
@@ -31,9 +32,7 @@ export async function GET(request: Request) {
       salarioMin: readNumber(url.searchParams.get('salarioMin')),
       salarioMax: readNumber(url.searchParams.get('salarioMax')),
       tipoContratacao: readNumber(url.searchParams.get('tipoContratacao')),
-      status: isStatusFiltro(url.searchParams.get('status') || '')
-        ? url.searchParams.get('status') || undefined
-        : undefined,
+      status: isStatusFiltro(status) ? status : undefined,
       page: readNumber(url.searchParams.get('page')),
       pageSize: readNumber(url.searchParams.get('pageSize')),
     });

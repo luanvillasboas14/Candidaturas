@@ -66,7 +66,7 @@ export function CandidatoDetalheDashboard({
       id: detalhe.idCandidato,
       vaga: detalhe.idVaga,
       motivo,
-      data: brToIso(dataDemissao),
+      data: brToIso(dataDemissao) || '',
       avaliacao,
       resumo: resumoAtividades.trim(),
     });
