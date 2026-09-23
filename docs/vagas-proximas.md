@@ -15,7 +15,7 @@ O atendente informa CEP, raio e tipo (`CLT` e/ou `Estágio`). O sistema geocodif
 - `src/lib/supabase.ts` — leitura de `jobs` / `jobs_enriched`.
 
 ## Regras de geocode
-A BrasilAPI às vezes devolve o centro de São Paulo. A origem do CEP usa a coordenada da AwesomeAPI quando ela não é o centro da cidade; senão Photon pela rua (sem o bairro, que o OSM muitas vezes não conhece) e casa o postcode. Não cai no geocode só da cidade em São Paulo.
+Cidade e rua vêm do ViaCEP (e da BrasilAPI se o ViaCEP falhar). A coordenada só vale se estiver a até 30 km dessa cidade — assim um CEP de São Vicente não cai em Barra Funda/Vila Madalena. Photon pela rua+cidade entra primeiro; AwesomeAPI e BrasilAPI só se o ponto bater com a cidade. Não assume São Paulo quando a API não devolve cidade. Não geocodifica só a cidade em São Paulo.
 
 ## Fora desta pasta
 Horário das vagas vem de `https://sistema.dnawork.ai/webhook/empresa.php`, cruzado pelo `codigo` da tabela `jobs`. Detalhe em `docs/fora-do-github.md`.
