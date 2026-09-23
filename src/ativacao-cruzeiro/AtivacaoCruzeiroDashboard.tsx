@@ -19,12 +19,42 @@ function parseOptionalInt(value: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function formatCep(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  return digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+}
+
+function faixaIdadeVaga(tipo?: string): { min: number; max: number } | null {
+  const raw = (tipo || '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase();
+  if (raw.includes('estagio')) return { min: 18, max: 22 };
+  if (raw.includes('clt')) return { min: 20, max: 50 };
+  return null;
+}
+
+function tipoContrato(tipo?: string): string {
+  const raw = (tipo || '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase();
+  if (raw.includes('estagio')) return 'Estágio';
+  if (raw.includes('clt')) return 'CLT';
+  return '';
+}
+
+function rotuloVaga(vaga: JobOption): string {
+  return vaga.bairro ? `${vaga.title} — ${vaga.bairro}` : vaga.title;
+}
+
 export function AtivacaoCruzeiroDashboard() {
   const [idadeMin, setIdadeMin] = useState('');
   const [idadeMax, setIdadeMax] = useState('');
-  const [curso, setCurso] = useState('');
+  const [cursos, setCursos] = useState<string[]>([]);
   const [cursoBusca, setCursoBusca] = useState('');
   const [cursoAberto, setCursoAberto] = useState(false);
+  const [localPor, setLocalPor] = useState<'bairro' | 'cep'>('bairro');
   const [series, setSeries] = useState<string[]>([]);
   const [serieAberto, setSerieAberto] = useState(false);
   const [sexo, setSexo] = useState('');
@@ -45,6 +75,9 @@ export function AtivacaoCruzeiroDashboard() {
   const [errorMessage, setErrorMessage] = useState('');
   const [erroVaga, setErroVaga] = useState(false);
   const [erroRaio, setErroRaio] = useState(false);
+  const [selecionados, setSelecionados] = useState<string[]>([]);
+  const [idadeManual, setIdadeManual] = useState(false);
+  const [cepManual, setCepManual] = useState(false);
 
   const vagaSelecionada = useMemo(
     () => vagas.find((vaga) => vaga.id === vagaId) || null,
@@ -56,7 +89,7 @@ export function AtivacaoCruzeiroDashboard() {
     if (!query) return vagas;
     const termos = query.split(/\s+/).filter(Boolean);
     return vagas.filter((vaga) => {
-      const texto = `${vaga.title} ${vaga.company} ${vaga.location}`.toLowerCase();
+      const texto = `${vaga.title} ${tipoContrato(vaga.contractType)} ${vaga.bairro || ''} ${vaga.location}`.toLowerCase();
       return termos.every((termo) => texto.includes(termo));
     });
   }, [vagaBusca, vagas]);
@@ -82,9 +115,40 @@ export function AtivacaoCruzeiroDashboard() {
     setVagas(vagasPayload.jobs || []);
   }
 
+  async function aplicarVaga(vaga: JobOption) {
+    setVagaId(vaga.id);
+    setVagaBusca(rotuloVaga(vaga));
+    setVagaAberto(false);
+    setErroVaga(false);
+    if (vaga.bairro) setBairro(vaga.bairro);
+
+    if (!idadeManual) {
+      const faixa = faixaIdadeVaga(vaga.contractType);
+      if (faixa) {
+        setIdadeMin(String(faixa.min));
+        setIdadeMax(String(faixa.max));
+      }
+    }
+
+    if (!cepManual) {
+      setCep(vaga.cep ? formatCep(vaga.cep) : '');
+    }
+    if (vaga.lat != null && vaga.lng != null) {
+      setRaioKm((atual) => atual || '10');
+      if (!vagaId) setLocalPor('cep');
+    }
+  }
+
+  function temOrigemVaga(): boolean {
+    return vagaSelecionada?.lat != null && vagaSelecionada?.lng != null;
+  }
+
   function cepIncompleto(): boolean {
+    if (localPor !== 'cep') return false;
+    const raio = parseOptionalInt(raioKm);
+    if (temOrigemVaga() && !cepManual) return raio == null;
     const cepDigits = cep.replace(/\D/g, '');
-    return cepDigits.length > 0 && (cepDigits.length !== 8 || parseOptionalInt(raioKm) == null);
+    return cepDigits.length > 0 && (cepDigits.length !== 8 || raio == null);
   }
 
   function temFiltro(): boolean {
@@ -94,11 +158,13 @@ export function AtivacaoCruzeiroDashboard() {
     const raio = parseOptionalInt(raioKm);
     return Boolean(
       (min != null && max != null) ||
-        curso.trim() ||
+        cursos.length > 0 ||
         series.length > 0 ||
         sexo.trim() ||
-        bairro.trim() ||
-        (cepDigits.length === 8 && raio != null)
+        (localPor === 'bairro' && bairro.trim()) ||
+        (localPor === 'cep' &&
+          raio != null &&
+          (temOrigemVaga() || cepDigits.length === 8))
     );
   }
 
@@ -114,12 +180,23 @@ export function AtivacaoCruzeiroDashboard() {
     return {
       idadeMin: min != null && max != null ? min : undefined,
       idadeMax: min != null && max != null ? max : undefined,
-      curso: curso.trim() || undefined,
+      curso: cursos,
       serie: series,
       sexo: sexo.trim() || undefined,
-      bairro: bairro.trim() || undefined,
-      cep: cepDigits.length === 8 && raio != null ? cepDigits : undefined,
-      raioKm: cepDigits.length === 8 && raio != null ? raio : undefined,
+      bairro: localPor === 'bairro' && bairro.trim() ? bairro.trim() : undefined,
+      cep:
+        localPor === 'cep' && cepManual && cepDigits.length === 8 && raio != null
+          ? cepDigits
+          : undefined,
+      lat:
+        localPor === 'cep' && !cepManual && vagaSelecionada?.lat != null
+          ? vagaSelecionada.lat
+          : undefined,
+      lng:
+        localPor === 'cep' && !cepManual && vagaSelecionada?.lng != null
+          ? vagaSelecionada.lng
+          : undefined,
+      raioKm: localPor === 'cep' && raio != null ? raio : undefined,
       vagaId,
     };
   }
@@ -138,11 +215,15 @@ export function AtivacaoCruzeiroDashboard() {
       params.set('idadeMin', String(filtros.idadeMin));
       params.set('idadeMax', String(filtros.idadeMax));
     }
-    if (filtros.curso) params.set('curso', filtros.curso);
+    for (const item of filtros.curso) params.append('curso', item);
     for (const item of filtros.serie) params.append('serie', item);
     if (filtros.sexo) params.set('sexo', filtros.sexo);
     if (filtros.bairro) params.set('bairro', filtros.bairro);
-    if (filtros.cep && filtros.raioKm != null) {
+    if (filtros.lat != null && filtros.lng != null && filtros.raioKm != null) {
+      params.set('lat', String(filtros.lat));
+      params.set('lng', String(filtros.lng));
+      params.set('raioKm', String(filtros.raioKm));
+    } else if (filtros.cep && filtros.raioKm != null) {
       params.set('cep', filtros.cep);
       params.set('raioKm', String(filtros.raioKm));
     }
@@ -158,6 +239,10 @@ export function AtivacaoCruzeiroDashboard() {
       if (!response.ok) throw new Error(payload.error || 'Falha ao filtrar alunos.');
       setData(payload);
       setPage(nextPage);
+      if (nextPage === 1) {
+        setSelecionados([]);
+        setQuantidade('');
+      }
     } catch (error) {
       setData(null);
       setErrorMessage(error instanceof Error ? error.message : 'Falha ao filtrar alunos.');
@@ -180,9 +265,28 @@ export function AtivacaoCruzeiroDashboard() {
       .catch(() => undefined);
   }, []);
 
-  const qtdSelecionada = parseOptionalInt(quantidade);
   const first = data ? (data.page - 1) * data.pageSize : 0;
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+
+  function aplicarQuantidade(valor: string, alunos = data?.alunos || []) {
+    const pedido = parseOptionalInt(valor);
+    if (pedido == null) {
+      setQuantidade('');
+      setSelecionados([]);
+      return;
+    }
+    const ids = alunos.slice(0, pedido).map((aluno) => aluno.pessoaId);
+    setSelecionados(ids);
+    setQuantidade(String(ids.length));
+  }
+
+  function alternarAluno(pessoaId: string) {
+    const proximo = selecionados.includes(pessoaId)
+      ? selecionados.filter((id) => id !== pessoaId)
+      : [...selecionados, pessoaId];
+    setSelecionados(proximo);
+    setQuantidade(proximo.length ? String(proximo.length) : '');
+  }
 
   return (
     <div className="ativacao-page">
@@ -208,6 +312,66 @@ export function AtivacaoCruzeiroDashboard() {
       >
         <div className="ativacao-filters">
           <div className="field">
+            <label htmlFor="ativacao-vaga-busca">Vaga</label>
+            <div className="search-select">
+              <input
+                id="ativacao-vaga-busca"
+                name="ativacao-vaga-busca"
+                type="text"
+                placeholder="Buscar vaga"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-form-type="other"
+                readOnly
+                value={
+                  vagaAberto || !vagaSelecionada ? vagaBusca : rotuloVaga(vagaSelecionada)
+                }
+                onFocus={(event) => {
+                  event.currentTarget.readOnly = false;
+                  setVagaAberto(true);
+                  setVagaBusca(vagaSelecionada ? rotuloVaga(vagaSelecionada) : '');
+                }}
+                onChange={(event) => {
+                  setVagaBusca(event.target.value);
+                  setVagaId('');
+                  setVagaAberto(true);
+                  if (erroVaga) setErroVaga(false);
+                }}
+                onBlur={() => {
+                  window.setTimeout(() => setVagaAberto(false), 150);
+                }}
+              />
+              {vagaAberto && vagasFiltradas.length > 0 && (
+                <ul className="dropdown">
+                  {vagasFiltradas.map((vaga) => (
+                    <li key={vaga.id}>
+                      <button
+                        type="button"
+                        className={`dropdown-item${vaga.id === vagaId ? ' selected' : ''}`}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => aplicarVaga(vaga)}
+                      >
+                        <span className="dropdown-title">
+                          {vaga.bairro ? `${vaga.title} — ${vaga.bairro}` : vaga.title}
+                        </span>
+                        <span className="dropdown-meta">
+                          {tipoContrato(vaga.contractType) || 'Tipo não informado'} • {vaga.location}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {erroVaga && <span className="ativacao-required-tip">Preencha este campo.</span>}
+            </div>
+            <p className="hint">Quem já recebeu esta vaga não aparece de novo.</p>
+          </div>
+
+          <div className="field">
             <label htmlFor="idade-min">Idade</label>
             <div className="ativacao-age">
               <input
@@ -218,7 +382,10 @@ export function AtivacaoCruzeiroDashboard() {
                 inputMode="numeric"
                 placeholder="De"
                 value={idadeMin}
-                onChange={(event) => setIdadeMin(event.target.value)}
+                onChange={(event) => {
+                  setIdadeManual(true);
+                  setIdadeMin(event.target.value);
+                }}
               />
               <span>até</span>
               <input
@@ -229,7 +396,10 @@ export function AtivacaoCruzeiroDashboard() {
                 inputMode="numeric"
                 placeholder="Até"
                 value={idadeMax}
-                onChange={(event) => setIdadeMax(event.target.value)}
+                onChange={(event) => {
+                  setIdadeManual(true);
+                  setIdadeMax(event.target.value);
+                }}
               />
             </div>
             <p className="hint">Os dois lados precisam estar preenchidos.</p>
@@ -242,14 +412,13 @@ export function AtivacaoCruzeiroDashboard() {
                 id="curso"
                 type="text"
                 placeholder="Buscar curso ou sigla (RH, ADM)"
-                value={cursoAberto || !curso ? cursoBusca : curso}
+                value={cursoAberto ? cursoBusca : cursos.join(', ')}
                 onFocus={() => {
                   setCursoAberto(true);
-                  setCursoBusca(curso);
+                  setCursoBusca('');
                 }}
                 onChange={(event) => {
                   setCursoBusca(event.target.value);
-                  setCurso('');
                   setCursoAberto(true);
                 }}
                 onBlur={() => {
@@ -257,26 +426,34 @@ export function AtivacaoCruzeiroDashboard() {
                 }}
               />
               {cursoAberto && cursosFiltrados.length > 0 && (
-                <ul className="dropdown">
-                  {cursosFiltrados.map((item) => (
-                    <li key={item}>
-                      <button
-                        type="button"
-                        className={`dropdown-item${item === curso ? ' selected' : ''}`}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          setCurso(item);
-                          setCursoBusca(item);
-                          setCursoAberto(false);
-                        }}
-                      >
-                        {item}
-                      </button>
-                    </li>
-                  ))}
+                <ul className="dropdown" role="listbox" aria-multiselectable="true">
+                  {cursosFiltrados.map((item) => {
+                    const marcado = cursos.includes(item);
+                    return (
+                      <li key={item}>
+                        <button
+                          type="button"
+                          className={`dropdown-item${marcado ? ' selected' : ''}`}
+                          aria-selected={marcado}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => {
+                            setCursos((atual) =>
+                              atual.includes(item)
+                                ? atual.filter((valor) => valor !== item)
+                                : [...atual, item]
+                            );
+                          }}
+                        >
+                          {marcado ? '✓ ' : ''}
+                          {item}
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
+            <p className="hint">Pode marcar mais de um.</p>
           </div>
 
           <div className="field">
@@ -386,118 +563,80 @@ export function AtivacaoCruzeiroDashboard() {
           </div>
 
           <div className="field">
-            <label htmlFor="bairro">Bairro</label>
-            <input
-              id="bairro"
-              type="text"
-              placeholder="Tatuapé"
-              value={bairro}
-              onChange={(event) => setBairro(event.target.value)}
-            />
+            <span className="filter-label">Local</span>
+            <div className="filter-chips">
+              <button
+                type="button"
+                className={`filter-chip${localPor === 'bairro' ? ' active' : ''}`}
+                onClick={() => setLocalPor('bairro')}
+              >
+                Bairro
+              </button>
+              <button
+                type="button"
+                className={`filter-chip${localPor === 'cep' ? ' active' : ''}`}
+                onClick={() => setLocalPor('cep')}
+              >
+                CEP
+              </button>
+            </div>
           </div>
 
-          <div className="field">
-            <label htmlFor="cep">CEP</label>
-            <input
-              id="cep"
-              type="text"
-              inputMode="numeric"
-              placeholder="01310-100"
-              value={cep}
-              onChange={(event) => {
-                const digits = event.target.value.replace(/\D/g, '').slice(0, 8);
-                setCep(digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits);
-                if (!digits) {
-                  setRaioKm('');
-                  setErroRaio(false);
-                }
-              }}
-            />
-            <p className="hint">CEP só vale junto com o raio.</p>
-          </div>
-
-          {cep.replace(/\D/g, '').length > 0 && (
+          {localPor === 'bairro' ? (
             <div className="field">
-              <label htmlFor="raio">Raio (km)</label>
-              <div className="search-select">
+              <label htmlFor="bairro">Bairro</label>
+              <input
+                id="bairro"
+                type="text"
+                placeholder="Tatuapé"
+                value={bairro}
+                onChange={(event) => setBairro(event.target.value)}
+              />
+            </div>
+          ) : (
+            <>
+              <div className="field">
+                <label htmlFor="cep">CEP</label>
                 <input
-                  id="raio"
-                  type="number"
-                  min={1}
-                  max={80}
+                  id="cep"
+                  type="text"
                   inputMode="numeric"
-                  placeholder="10"
-                  value={raioKm}
+                  placeholder="Opcional"
+                  value={cep}
                   onChange={(event) => {
-                    setRaioKm(event.target.value);
-                    if (erroRaio) setErroRaio(false);
+                    const digits = event.target.value.replace(/\D/g, '').slice(0, 8);
+                    setCepManual(digits.length > 0);
+                    setCep(formatCep(digits));
+                    if (!raioKm) setRaioKm('10');
                   }}
                 />
-                {erroRaio && <span className="ativacao-required-tip">Preencha este campo.</span>}
+                <p className="hint">
+                  {temOrigemVaga()
+                    ? 'O raio usa a latitude e a longitude da vaga. CEP só se você quiser outro ponto.'
+                    : 'CEP só vale junto com o raio.'}
+                </p>
               </div>
-            </div>
+              <div className="field">
+                <label htmlFor="raio">Raio (km)</label>
+                <div className="search-select">
+                  <input
+                    id="raio"
+                    type="number"
+                    min={1}
+                    max={80}
+                    inputMode="numeric"
+                    placeholder="10"
+                    value={raioKm}
+                    onChange={(event) => {
+                      setRaioKm(event.target.value);
+                      if (erroRaio) setErroRaio(false);
+                    }}
+                  />
+                  {erroRaio && <span className="ativacao-required-tip">Preencha este campo.</span>}
+                </div>
+              </div>
+            </>
           )}
-
-          <div className="field">
-            <label htmlFor="ativacao-vaga-busca">Vaga</label>
-            <div className="search-select">
-              <input
-                id="ativacao-vaga-busca"
-                name="ativacao-vaga-busca"
-                type="text"
-                placeholder="Buscar vaga"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                data-lpignore="true"
-                data-1p-ignore="true"
-                data-form-type="other"
-                readOnly
-                value={vagaAberto || !vagaSelecionada ? vagaBusca : vagaSelecionada.title}
-                onFocus={(event) => {
-                  event.currentTarget.readOnly = false;
-                  setVagaAberto(true);
-                  setVagaBusca(vagaSelecionada?.title || '');
-                }}
-                onChange={(event) => {
-                  setVagaBusca(event.target.value);
-                  setVagaId('');
-                  setVagaAberto(true);
-                  if (erroVaga) setErroVaga(false);
-                }}
-                onBlur={() => {
-                  window.setTimeout(() => setVagaAberto(false), 150);
-                }}
-              />
-              {vagaAberto && vagasFiltradas.length > 0 && (
-                <ul className="dropdown">
-                  {vagasFiltradas.map((vaga) => (
-                    <li key={vaga.id}>
-                      <button
-                        type="button"
-                        className={`dropdown-item${vaga.id === vagaId ? ' selected' : ''}`}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          setVagaId(vaga.id);
-                          setVagaBusca(vaga.title);
-                          setVagaAberto(false);
-                          setErroVaga(false);
-                        }}
-                      >
-                        <span className="dropdown-title">{vaga.title}</span>
-                        <span className="dropdown-meta">
-                          {vaga.company} • {vaga.location}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {erroVaga && <span className="ativacao-required-tip">Preencha este campo.</span>}
-            </div>
-            <p className="hint">Quem já recebeu esta vaga não aparece de novo.</p>
-          </div>
         </div>
 
         <button type="submit" className="submit-button" disabled={isLoading}>
@@ -530,7 +669,7 @@ export function AtivacaoCruzeiroDashboard() {
                 inputMode="numeric"
                 placeholder="50"
                 value={quantidade}
-                onChange={(event) => setQuantidade(event.target.value)}
+                onChange={(event) => aplicarQuantidade(event.target.value, data.alunos)}
               />
             </div>
 
@@ -538,7 +677,7 @@ export function AtivacaoCruzeiroDashboard() {
               type="button"
               className="ativacao-page-btn"
               disabled={isLoading || data.total === 0}
-              onClick={() => setQuantidade(String(data.total))}
+              onClick={() => aplicarQuantidade(String(data.alunos.length), data.alunos)}
             >
               Selecionar todos
             </button>
@@ -548,38 +687,45 @@ export function AtivacaoCruzeiroDashboard() {
             <p className="subtitle">Nenhum aluno com esses filtros.</p>
           ) : (
             <>
-              <ul className="ativacao-list">
+              <div className="ativacao-list">
                 {data.alunos.map((aluno, index) => {
-                  const selecionado =
-                    qtdSelecionada != null && first + index < qtdSelecionada;
+                  const selecionado = selecionados.includes(aluno.pessoaId);
                   return (
-                    <li key={aluno.pessoaId} className={selecionado ? 'selected' : undefined}>
-                      <div>
+                    <button
+                      key={aluno.pessoaId}
+                      type="button"
+                      className={`nearby-item${selecionado ? ' selected' : ''}`}
+                      onClick={() => alternarAluno(aluno.pessoaId)}
+                    >
+                      <span className={`nearby-check${selecionado ? ' checked' : ''}`} aria-hidden>
+                        {selecionado ? '✓' : ''}
+                      </span>
+                      <span className="nearby-item-body">
                         <strong>{aluno.nome}</strong>
-                        <span>
+                        <span className="nearby-meta">
                           {aluno.curso || 'Sem curso'}
                           {aluno.serie ? ` · ${aluno.serie}º semestre` : ''}
                           {aluno.idade != null ? ` · ${aluno.idade} anos` : ''}
                         </span>
-                        <em>
+                        <span className="nearby-meta">
                           {aluno.bairro || 'Sem bairro'}
                           {aluno.distanciaKm != null ? ` · ${aluno.distanciaKm.toLocaleString('pt-BR')} km` : ''}
                           {aluno.polo ? ` · ${aluno.polo}` : ''}
-                        </em>
-                      </div>
-                      {aluno.celular && <em>{aluno.celular}</em>}
-                    </li>
+                        </span>
+                      </span>
+                      {aluno.celular && <span className="nearby-distance">{aluno.celular}</span>}
+                    </button>
                   );
                 })}
-              </ul>
+              </div>
 
               <div className="ativacao-pager">
                 <span>
                   {(first + (data.alunos.length ? 1 : 0)).toLocaleString('pt-BR')}–
                   {(first + data.alunos.length).toLocaleString('pt-BR')} de{' '}
                   {data.total.toLocaleString('pt-BR')}
-                  {qtdSelecionada != null
-                    ? ` · ${Math.min(qtdSelecionada, data.total).toLocaleString('pt-BR')} selecionados`
+                  {selecionados.length
+                    ? ` · ${selecionados.length.toLocaleString('pt-BR')} selecionados`
                     : ''}
                 </span>
                 <div>
@@ -599,7 +745,7 @@ export function AtivacaoCruzeiroDashboard() {
                   >
                     Próxima
                   </button>
-                  {qtdSelecionada != null && (
+                  {selecionados.length > 0 && (
                     <button type="button" className="ativacao-page-btn">
                       Ativar
                     </button>

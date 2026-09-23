@@ -7,7 +7,7 @@ import {
   upsertAlunosCep,
   type AlunoCepRow,
 } from '@/lib/supabase-server';
-import { geocodeBairroComoVagas, isLocalValido, localKey } from './geo-local';
+import { chaveLocal, geocodeAlunoLocal, isLocalValido, isRuaValida } from './geo-local';
 import { LATEST_MATRICULADOS, LINHA_VALIDA } from './queries';
 
 export type AlunosCepSyncStatus = {
@@ -25,11 +25,12 @@ export type AlunosCepSyncResult = AlunosCepSyncStatus & {
   inicializado: boolean;
 };
 
-type AlunoSnapshot = {
+export type AlunoSnapshot = {
   rgm: string;
   telefone: string;
   cidade: string;
   bairro: string;
+  endereco: string;
 };
 
 async function markSync(snapshotId: number, uploadedAt: Date) {
@@ -55,6 +56,7 @@ export async function listAlunosSnapshot(snapshotId: number): Promise<Map<string
     phones_digits: string | null;
     cidade: string | null;
     bairro: string | null;
+    endereco: string | null;
   }>(
     `
     SELECT
@@ -62,7 +64,12 @@ export async function listAlunosSnapshot(snapshotId: number): Promise<Map<string
       NULLIF(TRIM(r.data->>'fone_cel'), '') AS fone_cel,
       NULLIF(TRIM(r.data->>'phones_digits'), '') AS phones_digits,
       COALESCE(NULLIF(TRIM(r.data->>'cidade'), ''), '') AS cidade,
-      COALESCE(NULLIF(TRIM(r.data->>'bairro'), ''), '') AS bairro
+      COALESCE(NULLIF(TRIM(r.data->>'bairro'), ''), '') AS bairro,
+      COALESCE(
+        NULLIF(TRIM(r.data->>'endereço'), ''),
+        NULLIF(TRIM(r.data->>'endereco'), ''),
+        ''
+      ) AS endereco
     FROM xl_rows r
     WHERE r.snapshot_id = $1
       AND ${LINHA_VALIDA}
@@ -81,13 +88,14 @@ export async function listAlunosSnapshot(snapshotId: number): Promise<Map<string
       telefone,
       cidade: row.cidade || '',
       bairro: row.bairro || '',
+      endereco: row.endereco || '',
     });
   }
   return byPhone;
 }
 
-async function resolverLocal(cidade: string, bairro: string) {
-  const key = localKey(cidade, bairro);
+async function resolverLocal(cidade: string, bairro: string, endereco: string) {
+  const key = chaveLocal(cidade, bairro, endereco);
   const db = getCruzeiroPool();
   const cached = await db.query<{ cep: string | null; lat: number | null; lng: number | null }>(
     'SELECT cep, lat, lng FROM ativacao_locais WHERE local_key = $1',
@@ -98,11 +106,11 @@ async function resolverLocal(cidade: string, bairro: string) {
     return { cep: hit.cep, lat: hit.lat, lng: hit.lng, bairro };
   }
 
-  if (!isLocalValido(cidade, bairro)) {
+  if (!isRuaValida(endereco) && !isLocalValido(cidade, bairro)) {
     return { cep: null, lat: null, lng: null, bairro: bairro || null };
   }
 
-  const geo = await geocodeBairroComoVagas(cidade, bairro);
+  const geo = await geocodeAlunoLocal(cidade, bairro, endereco);
   await db.query(
     `
     INSERT INTO ativacao_locais (local_key, cidade, bairro, cep, lat, lng, geocoded_at, tentativas)
@@ -192,6 +200,8 @@ export async function sincronizarAlunosCep(): Promise<AlunosCepSyncResult> {
   }
 
   if (lastId === current.id) {
+    const { repararAlunosCepPorRua } = await import('./alunos-cep-repair');
+    await repararAlunosCepPorRua(6);
     const status = await statusAlunosCep();
     return { ...status, alunosNovos: 0, alunosRemovidos, inicializado: false };
   }
@@ -200,7 +210,7 @@ export async function sincronizarAlunosCep(): Promise<AlunosCepSyncResult> {
   const novos: AlunoCepRow[] = [];
   for (const [telefone, aluno] of atuais) {
     if (anteriores.has(telefone) || gravados.has(telefone)) continue;
-    const local = await resolverLocal(aluno.cidade, aluno.bairro);
+    const local = await resolverLocal(aluno.cidade, aluno.bairro, aluno.endereco);
     novos.push({
       rgm: aluno.rgm,
       telefone,

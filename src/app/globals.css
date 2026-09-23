@@ -1384,6 +1384,11 @@ select option {
     grid-template-columns: 1fr;
   }
 
+  .banco-list li,
+  .banco-detalhe-grid {
+    grid-template-columns: 1fr;
+  }
+
   .ativacao-resumo {
     grid-template-columns: 1fr;
     align-items: stretch;
@@ -1535,4 +1540,285 @@ select option {
 .dropdown::-webkit-scrollbar-thumb {
   background: var(--input-border);
   border-radius: 3px;
+}
+
+.banco-dashboard .ativacao-filters select,
+.banco-dashboard .ativacao-filters textarea,
+.banco-demitir select,
+.banco-demitir textarea,
+.banco-demitir input {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9375rem;
+}
+
+.banco-list li {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(150px, 1fr) minmax(160px, 1.2fr) minmax(160px, 1.1fr) auto;
+  align-items: start;
+  gap: 16px;
+}
+
+.banco-list strong,
+.banco-list span,
+.banco-list em {
+  min-width: 0;
+}
+
+.banco-list-link {
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent, var(--text));
+  text-decoration: none;
+}
+
+.banco-list-link:hover {
+  text-decoration: underline;
+}
+
+button.banco-list-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.banco-voltar {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 10px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--accent);
+  color: #1a1208;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.banco-voltar:hover {
+  filter: brightness(1.08);
+}
+
+.banco-detalhe {
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.banco-detalhe-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1.25rem;
+}
+
+.banco-detalhe-grid p,
+.banco-detalhe p {
+  margin: 0;
+}
+
+.banco-detalhe-grid strong {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 0.15rem;
+}
+
+.banco-demitir {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.4rem;
+}
+
+.banco-avaliacao {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.banco-avaliacao button {
+  width: auto;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.banco-avaliacao button.selected {
+  border-color: var(--accent);
+  background: var(--selected-bg);
+  color: var(--accent);
+}
+
+.app-shell-print {
+  background: #e8e8e8;
+}
+
+.app-shell-print .app-content {
+  padding: 20px 16px 40px;
+}
+
+.banco-print {
+  max-width: 210mm;
+  margin: 0 auto;
+}
+
+.banco-print-doc {
+  background: #fff;
+  color: #111;
+  padding: 36px 44px 48px;
+  min-height: 297mm;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.recisao-doc h1 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.recisao-doc h2 {
+  margin: 18px 0 6px;
+  font-size: 14px;
+}
+
+.recisao-doc p {
+  margin: 0 0 8px;
+  text-align: justify;
+}
+
+.recisao-marca {
+  margin: 0 0 18px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: left;
+}
+
+.recisao-ref {
+  text-align: right !important;
+  margin-bottom: 20px !important;
+}
+
+.recisao-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 28px;
+  margin-bottom: 8px;
+}
+
+.recisao-col-title {
+  font-weight: 700;
+  text-align: left !important;
+}
+
+.recisao-tipo {
+  text-align: left !important;
+}
+
+.recisao-nowrap {
+  white-space: nowrap;
+}
+
+.recisao-local {
+  text-align: center !important;
+  margin: 28px 0 !important;
+}
+
+.recisao-assinaturas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 36px 28px;
+  margin-top: 36px;
+}
+
+.recisao-assinaturas p {
+  margin: 0;
+  text-align: center;
+  font-weight: 700;
+}
+
+.recisao-assinatura-full {
+  grid-column: 1 / -1;
+  padding-top: 12px;
+}
+
+.banco-print-doc sup {
+  font-size: inherit;
+  vertical-align: baseline;
+  line-height: inherit;
+}
+
+.banco-bloco {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.banco-docs {
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.banco-docs li {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--input-bg);
+}
+
+.banco-print-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: #111;
+}
+
+.banco-print-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media print {
+  .app-shell-print {
+    background: #fff;
+  }
+
+  .app-shell-print .app-content {
+    padding: 0;
+  }
+
+  .banco-print-bar,
+  .banco-print-acoes,
+  .sidebar,
+  .banco-voltar,
+  .ativacao-page-btn {
+    display: none !important;
+  }
+
+  .banco-print-doc {
+    box-shadow: none;
+    min-height: 0;
+    padding: 0;
+  }
 }

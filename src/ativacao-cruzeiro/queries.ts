@@ -70,7 +70,7 @@ const BASE_ALUNOS = `
       COALESCE(rgm, cpf, 'row-' || id::text) AS pessoa_id
     FROM base
     WHERE ($1::int IS NULL OR (idade IS NOT NULL AND idade >= $1 AND idade <= $2))
-      AND ($3::text IS NULL OR curso = $3)
+      AND ($3::text[] IS NULL OR curso = ANY($3))
       AND ($4::text[] IS NULL OR serie = ANY($4))
       AND ($5::text IS NULL OR sexo = $5)
   ),
@@ -121,11 +121,22 @@ function normalizeRaio(value?: number): number | null {
   return raio;
 }
 
+function normalizeCoord(value?: number): number | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  return Number(value);
+}
+
 function normalizeQuantidade(value?: number): number | null {
   if (value == null || !Number.isFinite(value)) return null;
   const quantidade = Math.trunc(value);
   if (quantidade < 1 || quantidade > 40000) return null;
   return quantidade;
+}
+
+function normalizeCursos(value?: string | string[]): string[] | null {
+  const raw = Array.isArray(value) ? value : value ? [value] : [];
+  const cursos = [...new Set(raw.map((item) => item.trim()).filter(Boolean))];
+  return cursos.length ? cursos : null;
 }
 
 function normalizeSeries(value?: string | string[]): string[] | null {
@@ -139,11 +150,13 @@ function normalizeSeries(value?: string | string[]): string[] | null {
 export function normalizeFiltros(input: FiltrosAtivacao): {
   idadeMin: number | null;
   idadeMax: number | null;
-  curso: string | null;
+  curso: string[] | null;
   serie: string[] | null;
   sexo: string | null;
   bairro: string | null;
   cep: string | null;
+  lat: number | null;
+  lng: number | null;
   raioKm: number | null;
   vagaId: string | null;
   quantidade: number | null;
@@ -156,13 +169,16 @@ export function normalizeFiltros(input: FiltrosAtivacao): {
   const [min, max] =
     idadeCompleta && idadeMin > idadeMax ? [idadeMax, idadeMin] : [idadeMin, idadeMax];
 
-  const curso = input.curso?.trim() || null;
+  const curso = normalizeCursos(input.curso);
   const serie = normalizeSeries(input.serie);
   const sexo = normalizeSexo(input.sexo);
   const bairro = input.bairro?.trim() || null;
   const cep = normalizeCep(input.cep || '');
+  const lat = normalizeCoord(input.lat);
+  const lng = normalizeCoord(input.lng);
   const raioKm = normalizeRaio(input.raioKm);
-  const cepRaio = cep && raioKm ? { cep, raioKm } : null;
+  const origemCoords = lat != null && lng != null && raioKm ? { lat, lng, raioKm } : null;
+  const cepRaio = !origemCoords && cep && raioKm ? { cep, raioKm } : null;
   const vagaId = input.vagaId?.trim() || null;
   const quantidade = normalizeQuantidade(input.quantidade);
 
@@ -177,7 +193,9 @@ export function normalizeFiltros(input: FiltrosAtivacao): {
     sexo,
     bairro,
     cep: cepRaio?.cep ?? null,
-    raioKm: cepRaio?.raioKm ?? null,
+    lat: origemCoords?.lat ?? null,
+    lng: origemCoords?.lng ?? null,
+    raioKm: origemCoords?.raioKm ?? cepRaio?.raioKm ?? null,
     vagaId,
     quantidade,
     page,
@@ -193,7 +211,8 @@ export function temFiltroAtivo(input: FiltrosAtivacao): boolean {
       filtros.serie?.length ||
       filtros.sexo ||
       filtros.bairro ||
-      filtros.cep
+      filtros.cep ||
+      (filtros.lat != null && filtros.lng != null)
   );
 }
 
@@ -246,9 +265,12 @@ async function aplicarLocalizacao(
   alunos: AlunoQueryRow[],
   bairro: string | null,
   cep: string | null,
-  raioKm: number | null
+  raioKm: number | null,
+  lat: number | null,
+  lng: number | null
 ): Promise<AlunoCruzeiro[]> {
-  if (!bairro && !cep) {
+  const temOrigem = (lat != null && lng != null && raioKm != null) || Boolean(cep && raioKm);
+  if (!bairro && !temOrigem) {
     return alunos.map((row) => ({
       pessoaId: row.pessoaId,
       nome: row.nome,
@@ -264,9 +286,18 @@ async function aplicarLocalizacao(
 
   const locais = await listAlunosCepLocalizacoes();
   const porTelefone = new Map(locais.map((local) => [local.telefone, local]));
+  const bairrosNoPonto = new Map<string, Set<string>>();
+  for (const local of locais) {
+    if (local.lat == null || local.lng == null || !local.bairro) continue;
+    const chave = `${Number(local.lat).toFixed(5)},${Number(local.lng).toFixed(5)}`;
+    const bairros = bairrosNoPonto.get(chave) || new Set<string>();
+    bairros.add(fold(local.bairro));
+    bairrosNoPonto.set(chave, bairros);
+  }
 
-  let origem: { lat: number; lng: number } | null = null;
-  if (cep && raioKm) {
+  let origem: { lat: number; lng: number } | null =
+    lat != null && lng != null ? { lat, lng } : null;
+  if (!origem && cep && raioKm) {
     origem = await geocodeCep(cep);
     if (!origem) {
       throw new Error('Não foi possível localizar esse CEP.');
@@ -280,13 +311,20 @@ async function aplicarLocalizacao(
     const telefone = telefoneAluno(row);
     const geo = telefone ? porTelefone.get(telefone) : undefined;
     const bairroAluno = geo?.bairro || row.bairro || '';
+    const ponto =
+      geo?.lat != null && geo.lng != null ? { lat: geo.lat, lng: geo.lng } : null;
+    const pontoCompartilhado = Boolean(
+      ponto && (bairrosNoPonto.get(`${ponto.lat.toFixed(5)},${ponto.lng.toFixed(5)}`)?.size || 0) > 1
+    );
     const distanciaKm =
-      origem && geo?.lat != null && geo.lng != null
-        ? Number(haversineKm(origem, { lat: geo.lat, lng: geo.lng }).toFixed(1))
+      origem && ponto && !pontoCompartilhado
+        ? Number(haversineKm(origem, ponto).toFixed(1))
         : null;
 
     if (termoBairro && !fold(bairroAluno).includes(termoBairro)) continue;
-    if (origem && raioKm != null && (distanciaKm == null || distanciaKm > raioKm)) continue;
+    if (origem && raioKm != null && (pontoCompartilhado || distanciaKm == null || distanciaKm > raioKm)) {
+      continue;
+    }
 
     filtrados.push({
       pessoaId: row.pessoaId,
@@ -321,7 +359,7 @@ export async function listarAlunosAtivacao(input: FiltrosAtivacao): Promise<{
     return { total: 0, page: filtros.page, pageSize: filtros.pageSize, alunos: [] };
   }
 
-  const usaLocal = Boolean(filtros.bairro || filtros.cep);
+  const usaLocal = Boolean(filtros.bairro || filtros.cep || (filtros.lat != null && filtros.lng != null));
   const precisaTodos = usaLocal || Boolean(filtros.vagaId);
   const offset = (filtros.page - 1) * filtros.pageSize;
   const params = [filtros.idadeMin, filtros.idadeMax, filtros.curso, filtros.serie, filtros.sexo];
@@ -348,7 +386,14 @@ export async function listarAlunosAtivacao(input: FiltrosAtivacao): Promise<{
   );
 
   let alunos: AlunoCruzeiro[] = usaLocal
-    ? await aplicarLocalizacao(lista.rows, filtros.bairro, filtros.cep, filtros.raioKm)
+    ? await aplicarLocalizacao(
+        lista.rows,
+        filtros.bairro,
+        filtros.cep,
+        filtros.raioKm,
+        filtros.lat,
+        filtros.lng
+      )
     : lista.rows.map((row) => ({
         pessoaId: row.pessoaId,
         nome: row.nome,

@@ -11,13 +11,17 @@ const NAV_ITEMS = [
   { href: '/so-contrato', label: 'Só contrato' },
   { href: '/origem', label: 'Origem' },
   { href: '/ativacao-cruzeiro', label: 'Ativação Cruzeiro' },
+  { href: '/banco-candidatos', label: 'Banco de Candidatos' },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const hideSidebar =
+    pathname.startsWith('/banco-candidatos/documento') || pathname.startsWith('/banco-candidatos/previa');
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${hideSidebar ? ' app-shell-print' : ''}`}>
+      {hideSidebar ? null : (
       <aside className="sidebar">
         <div className="sidebar-brand">
           <Image
@@ -53,6 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <ThemeToggle />
         </div>
       </aside>
+      )}
 
       <div className="app-content">{children}</div>
     </div>

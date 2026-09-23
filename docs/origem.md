@@ -3,7 +3,7 @@
 Rota da tela: `/origem`.
 
 ## O que faz
-Dashboard da origem dos leads na tabela `tracker_leads`: total, pizza por canal e campanhas. Filtro por período (7 dias ao abrir, no máximo 3 meses) e datas `dd/mm/aaaa` no horário de Brasília, digitadas ou escolhidas no calendário. O percentual aparece no tooltip ao passar o mouse na fatia. A lista de campanhas omite “Sem campanha”; cada vaga do Infojobs e cada arte de Instagram/Facebook entra como uma campanha.
+Dashboard da origem dos leads na tabela `tracker_leads`: total, pizza por canal e campanhas. Lê todas as rows do período (página de 1000 em 1000; o Supabase corta em 1000 se for um `select` só). Filtro por período (7 dias ao abrir, no máximo 3 meses) e datas `dd/mm/aaaa` no horário de Brasília, digitadas ou escolhidas no calendário. O percentual aparece no tooltip ao passar o mouse na fatia. A lista de campanhas omite “Sem campanha”; cada vaga do Infojobs e cada arte de Instagram/Facebook entra como uma campanha.
 
 A gravação na tabela não acontece na candidatura. O CRM (ou o n8n, se apontar para cá) chama o webhook exclusivo na criação do lead.
 

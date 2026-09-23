@@ -171,22 +171,29 @@ export async function listTrackerLeads(range?: {
   from?: string | null;
   to?: string | null;
 }): Promise<TrackerLeadRow[]> {
-  let query = getSupabaseServer()
-    .from('tracker_leads')
-    .select('id, telefone, telefone_normalizado, origem, campanha, headline, referrer, created_at')
-    .order('created_at', { ascending: false })
-    .limit(5000);
+  const rows: TrackerLeadRow[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    let query = getSupabaseServer()
+      .from('tracker_leads')
+      .select('id, telefone, telefone_normalizado, origem, campanha, headline, referrer, created_at')
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize - 1);
 
-  if (range?.from) {
-    query = query.gte('created_at', `${range.from}T00:00:00.000-03:00`);
-  }
-  if (range?.to) {
-    query = query.lte('created_at', `${range.to}T23:59:59.999-03:00`);
-  }
+    if (range?.from) {
+      query = query.gte('created_at', `${range.from}T00:00:00.000-03:00`);
+    }
+    if (range?.to) {
+      query = query.lte('created_at', `${range.to}T23:59:59.999-03:00`);
+    }
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data || []) as TrackerLeadRow[];
+    const { data, error } = await query;
+    if (error) throw error;
+    if (!data?.length) break;
+    rows.push(...(data as TrackerLeadRow[]));
+    if (data.length < pageSize) break;
+  }
+  return rows;
 }
 
 export type AlunoCepRow = {
@@ -246,6 +253,24 @@ export async function listAlunosCepTelefones(): Promise<string[]> {
     if (data.length < pageSize) break;
   }
   return telefones;
+}
+
+export async function updateAlunosCepGeoByBairro(
+  bairro: string,
+  geo: { cep: string | null; lat: number; lng: number }
+): Promise<number> {
+  const { data, error } = await getSupabaseServer()
+    .from('alunos_cep')
+    .update({
+      cep: geo.cep,
+      lat: geo.lat,
+      lng: geo.lng,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('bairro', bairro)
+    .select('telefone');
+  if (error) throw error;
+  return data?.length || 0;
 }
 
 export async function upsertAlunosCep(rows: AlunoCepRow[]): Promise<void> {

@@ -8,6 +8,7 @@ Este arquivo lista o que o app usa e **não vive neste repositório**.
 - Porta **3000**. Start command vazio (entrypoint da imagem). `docker-entrypoint.sh` força `HOSTNAME=0.0.0.0`.
 - Variáveis de ambiente do app ficam só no EasyPanel. No GitHub, o secret é só `EASYPANEL_DEPLOY_WEBHOOK`.
 - Ativação Cruzeiro lê o Postgres `dcz_sync` com `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS` e `DB_NAME`. Essas chaves vão no EasyPanel, nunca no GitHub.
+- Banco de Candidatos lê o MySQL `dna_work` (Lightsail/RDS) com `DNA_WORK_DB_*`. Master só no EasyPanel / `.env.local`. A lista é SELECT; escrita só no fluxo Demitir.
 - Sync de localização: `POST https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/ativacao-cruzeiro/geo-sync`. A tela também dispara se o snapshot de matriculados for novo. Um cron diário depois das 12h (Brasília) cobre o upload do dia.
 - App em produção: `https://dnaworkia-candidaturas.vkfaze.easypanel.host`
 

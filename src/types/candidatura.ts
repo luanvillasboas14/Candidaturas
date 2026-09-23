@@ -31,6 +31,11 @@ export interface JobOption {
   title: string;
   company: string;
   location: string;
+  bairro?: string;
+  cep?: string;
+  contractType?: string;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export type JobContractType = 'CLT' | 'Estágio';

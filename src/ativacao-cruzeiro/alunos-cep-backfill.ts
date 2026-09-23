@@ -1,7 +1,7 @@
 import { getCruzeiroPool } from '@/lib/cruzeiro-db';
 import { upsertAlunosCep } from '@/lib/supabase-server';
 import { listAlunosSnapshot } from './alunos-cep-sync';
-import { geocodeBairroComoVagas, isLocalValido, localKey } from './geo-local';
+import { chaveLocal, geocodeAlunoLocal, isLocalValido, isRuaValida } from './geo-local';
 import { LATEST_MATRICULADOS } from './queries';
 
 function log(message: string) {
@@ -17,14 +17,24 @@ export async function backfillAlunosCep() {
   const alunos = await listAlunosSnapshot(current.id);
   const grupos = new Map<
     string,
-    { cidade: string; bairro: string; alunos: Array<{ rgm: string; telefone: string; cidade: string; bairro: string }> }
+    {
+      cidade: string;
+      bairro: string;
+      endereco: string;
+      alunos: Array<{ rgm: string; telefone: string; bairro: string }>;
+    }
   >();
 
   for (const aluno of alunos.values()) {
-    if (!isLocalValido(aluno.cidade, aluno.bairro)) continue;
-    const key = localKey(aluno.cidade, aluno.bairro);
-    const grupo = grupos.get(key) || { cidade: aluno.cidade, bairro: aluno.bairro, alunos: [] };
-    grupo.alunos.push(aluno);
+    if (!isRuaValida(aluno.endereco) && !isLocalValido(aluno.cidade, aluno.bairro)) continue;
+    const key = chaveLocal(aluno.cidade, aluno.bairro, aluno.endereco);
+    const grupo = grupos.get(key) || {
+      cidade: aluno.cidade,
+      bairro: aluno.bairro,
+      endereco: aluno.endereco,
+      alunos: [],
+    };
+    grupo.alunos.push({ rgm: aluno.rgm, telefone: aluno.telefone, bairro: aluno.bairro });
     grupos.set(key, grupo);
   }
 
@@ -40,7 +50,7 @@ export async function backfillAlunosCep() {
     );
   }
 
-  log(`snapshot ${current.id}: ${alunos.size} telefones, ${grupos.size} bairros`);
+  log(`snapshot ${current.id}: ${alunos.size} telefones, ${grupos.size} ruas/bairros`);
 
   let processados = 0;
   for (;;) {
@@ -58,7 +68,8 @@ export async function backfillAlunosCep() {
     const local = pendente.rows[0];
     if (!local) break;
 
-    const geo = await geocodeBairroComoVagas(local.cidade, local.bairro);
+    const grupo = grupos.get(local.local_key);
+    const geo = await geocodeAlunoLocal(local.cidade, grupo?.bairro || local.bairro, grupo?.endereco);
     await db.query(
       `
       UPDATE ativacao_locais
@@ -68,7 +79,6 @@ export async function backfillAlunosCep() {
       [local.local_key, geo?.cep ?? null, geo?.lat ?? null, geo?.lng ?? null]
     );
 
-    const grupo = grupos.get(local.local_key);
     if (grupo?.alunos.length) {
       await upsertAlunosCep(
         grupo.alunos.map((aluno) => ({
@@ -92,7 +102,7 @@ export async function backfillAlunosCep() {
         `,
         [keys]
       );
-      log(`geocodificados ${processados} · pendentes ${left.rows[0]?.n} · ultimo ${local.cidade} / ${local.bairro} · cep ${geo?.cep || '-'}`);
+      log(`geocodificados ${processados} · pendentes ${left.rows[0]?.n} · ultimo ${local.cidade} / ${grupo?.endereco || local.bairro} · cep ${geo?.cep || '-'}`);
     }
   }
 
@@ -102,7 +112,7 @@ export async function backfillAlunosCep() {
   );
   const byKey = new Map(coords.rows.map((row) => [row.local_key, row]));
   const rows = [...alunos.values()].map((aluno) => {
-    const key = localKey(aluno.cidade, aluno.bairro);
+    const key = chaveLocal(aluno.cidade, aluno.bairro, aluno.endereco);
     const geo = byKey.get(key);
     return {
       rgm: aluno.rgm,
@@ -132,5 +142,5 @@ export async function backfillAlunosCep() {
   );
 
   const ok = coords.rows.filter((row) => row.lat != null).length;
-  log(`concluido: ${rows.length} alunos na alunos_cep, ${ok}/${grupos.size} bairros com coordenada`);
+  log(`concluido: ${rows.length} alunos na alunos_cep, ${ok}/${grupos.size} ruas com coordenada`);
 }

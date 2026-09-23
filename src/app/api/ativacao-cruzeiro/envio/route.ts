@@ -10,6 +10,12 @@ function readInt(value: unknown): number | undefined {
   return Number(value);
 }
 
+function readNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string' || !/^-?\d+(\.\d+)?$/.test(value)) return undefined;
+  return Number(value);
+}
+
 function readText(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
@@ -27,12 +33,14 @@ export async function POST(request: Request) {
     const data = await registrarEnvioAtivacao({
       idadeMin: readInt(body.idadeMin),
       idadeMax: readInt(body.idadeMax),
-      curso: readText(body.curso),
+      curso: readSeries(body.curso),
       serie: readSeries(body.serie),
       sexo: readText(body.sexo),
       bairro: readText(body.bairro),
       cep: readText(body.cep),
-      raioKm: readInt(body.raioKm),
+      lat: readNumber(body.lat),
+      lng: readNumber(body.lng),
+      raioKm: readNumber(body.raioKm),
       vagaId: readText(body.vagaId),
       quantidade: readInt(body.quantidade),
     });

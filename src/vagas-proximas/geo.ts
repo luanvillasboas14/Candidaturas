@@ -29,7 +29,7 @@ export function haversineKm(from: Coordinates, to: Coordinates): number {
 
 type PhotonFeature = {
   geometry?: { coordinates?: unknown };
-  properties?: { postcode?: string };
+  properties?: { postcode?: string; city?: string; district?: string };
 };
 
 function coordsFromPhotonFeature(feature: PhotonFeature | undefined): Coordinates | null {
@@ -162,39 +162,64 @@ function formattedCep(cep: string): string {
   return `${cep.slice(0, 5)}-${cep.slice(5)}`;
 }
 
+const cepGeoCache = new Map<string, Coordinates | null>();
+
 export async function geocodeCep(cep: string): Promise<Coordinates | null> {
-  const [brasil, awesome] = await Promise.all([lookupBrasilApi(cep), geocodeCepAwesomeApi(cep)]);
+  const digits = cep.replace(/\D/g, '');
+  if (digits.length !== 8) return null;
+  if (cepGeoCache.has(digits)) return cepGeoCache.get(digits) ?? null;
+
+  const [brasil, awesome] = await Promise.all([lookupBrasilApi(digits), geocodeCepAwesomeApi(digits)]);
   const city = brasil?.city || 'São Paulo';
   const state = brasil?.state || 'SP';
+  let result: Coordinates | null = null;
 
   if (isUsableOrigin(awesome, city)) {
-    return awesome;
-  }
+    result = awesome;
+  } else {
+    const photonQueries = [
+      brasil?.street ? `${brasil.street}, ${city}, ${state}` : null,
+      `${formattedCep(digits)}, ${city}, ${state}`,
+      brasil?.street && brasil.neighborhood
+        ? `${brasil.street}, ${brasil.neighborhood}, ${city}, ${state}`
+        : null,
+    ].filter((query): query is string => Boolean(query));
 
-  const photonQueries = [
-    brasil?.street ? `${brasil.street}, ${city}, ${state}` : null,
-    `${formattedCep(cep)}, ${city}, ${state}`,
-    brasil?.street && brasil.neighborhood
-      ? `${brasil.street}, ${brasil.neighborhood}, ${city}, ${state}`
-      : null,
-  ].filter((query): query is string => Boolean(query));
+    for (const query of photonQueries) {
+      const fromPhoton = await geocodeAddress(query, digits);
+      if (isUsableOrigin(fromPhoton, city)) {
+        result = fromPhoton;
+        break;
+      }
+    }
 
-  for (const query of photonQueries) {
-    const fromPhoton = await geocodeAddress(query, cep);
-    if (isUsableOrigin(fromPhoton, city)) {
-      return fromPhoton;
+    if (!result && isUsableOrigin(brasil?.coords ?? null, city)) {
+      result = brasil?.coords ?? null;
+    }
+    if (!result && awesome) result = awesome;
+    if (!result && cityKey(city) !== 'sao paulo') {
+      result = await geocodeAddress(`${city}, ${state}, Brasil`, digits);
     }
   }
 
-  if (isUsableOrigin(brasil?.coords ?? null, city)) {
-    return brasil?.coords ?? null;
-  }
+  cepGeoCache.set(digits, result);
+  return result;
+}
 
-  if (awesome) return awesome;
+export async function reverseCep(lat: number, lng: number): Promise<string | null> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  await waitPhotonSlot();
+  const url = new URL('https://photon.komoot.io/reverse');
+  url.searchParams.set('lat', String(lat));
+  url.searchParams.set('lon', String(lng));
+  url.searchParams.set('lang', 'pt');
 
-  if (cityKey(city) === 'sao paulo') {
-    return null;
-  }
+  const response = await fetch(url.toString(), {
+    headers: { 'User-Agent': 'CandidaturasDNAWork/1.0' },
+  });
+  if (!response.ok) return null;
 
-  return geocodeAddress(`${city}, ${state}, Brasil`, cep);
+  const data = await response.json();
+  const postcode = String(data?.features?.[0]?.properties?.postcode || '').replace(/\D/g, '');
+  return postcode.length === 8 ? postcode : null;
 }

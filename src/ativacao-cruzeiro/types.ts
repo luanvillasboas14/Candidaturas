@@ -20,11 +20,13 @@ export type OpcoesAtivacao = {
 export type FiltrosAtivacao = {
   idadeMin?: number;
   idadeMax?: number;
-  curso?: string;
+  curso?: string | string[];
   serie?: string | string[];
   sexo?: string;
   bairro?: string;
   cep?: string;
+  lat?: number;
+  lng?: number;
   raioKm?: number;
   vagaId?: string;
   quantidade?: number;
