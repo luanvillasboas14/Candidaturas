@@ -134,7 +134,7 @@ async function carregarEnvelope(idContrato: string): Promise<EnvelopeTela | null
       const status = texto(item.status) || 'new';
       return {
         papel: papelDe(tipo),
-        nome: texto(item.nome),
+        nome: ehDna(tipo) ? 'DNA Work' : texto(item.nome),
         email: texto(item.email),
         status,
         data: texto(item.data) || null,
@@ -237,8 +237,8 @@ async function montarSigners(idCandidato: string, idVaga: string): Promise<Signe
         authMode: 'tokenEmail',
       });
     };
+    addEmpresa(1, texto(emp.responsavel), texto(emp.email), `empresa=${emp.id_empresa}`, 'Empresa');
     if (flags) {
-      addEmpresa(flags.responsavel, texto(emp.responsavel), texto(emp.email), `empresa=${emp.id_empresa}`, 'responsável');
       addEmpresa(
         flags.financeiro,
         texto(emp.nome_financeiro),
@@ -274,7 +274,7 @@ async function montarSigners(idCandidato: string, idVaga: string): Promise<Signe
     ? await pool.query<DnaRow[]>(`SELECT * FROM instituicao WHERE id_instiduicao = ? LIMIT 1`, [cand.escola])
     : [[]];
   const escola = escRows[0];
-  if (escola && Number(escola.assina_digital) === 1) {
+  if (escola) {
     const [escFlagsRows] = await pool.query<DnaRow[]>(
       `SELECT * FROM assinaturas_instituicao WHERE id_instituicao = ? AND tipo = 'TCE' LIMIT 1`,
       [escola.id_instiduicao]
@@ -293,14 +293,14 @@ async function montarSigners(idCandidato: string, idVaga: string): Promise<Signe
         authMode: 'tokenEmail',
       });
     };
+    addEscola(
+      1,
+      texto(escola.responsavel),
+      texto(escola.responsavel_email) || texto(escola.email),
+      `escola-diretor=${escola.id_instiduicao}`,
+      'diretor'
+    );
     if (escFlags) {
-      addEscola(
-        escFlags.diretor,
-        texto(escola.responsavel),
-        texto(escola.responsavel_email),
-        `escola-diretor=${escola.id_instiduicao}`,
-        'diretor'
-      );
       addEscola(
         escFlags.representante,
         texto(escola.representante_legal),
@@ -318,28 +318,11 @@ async function montarSigners(idCandidato: string, idVaga: string): Promise<Signe
     }
   }
 
-  const agenteId = zapsignAgenteId();
-  let nomeAgente = '';
-  let idAgenteSigner = agenteId;
-  if (cv.id_responsavel_agente) {
-    const [agRows] = await pool.query<DnaRow[]>(`SELECT * FROM agente_responsavel WHERE id = ? LIMIT 1`, [
-      cv.id_responsavel_agente,
-    ]);
-    nomeAgente = texto(agRows[0]?.nome);
-    idAgenteSigner = texto(cv.id_responsavel_agente) || agenteId;
-  }
-  if (!nomeAgente) {
-    const [aiRows] = await pool.query<DnaRow[]>(`SELECT * FROM agente_integracao WHERE id_agente = ? LIMIT 1`, [
-      agenteId,
-    ]);
-    nomeAgente = texto(aiRows[0]?.responsavel) || texto(aiRows[0]?.razao_social);
-  }
-  if (!nomeAgente) nomeAgente = 'DNA Work';
   drafts.push({
     papel: 'DNA Work',
-    nome: nomeAgente,
+    nome: 'DNA Work',
     email: '',
-    externalId: `agente=${idAgenteSigner}`,
+    externalId: `agente=${zapsignAgenteId()}`,
     sendEmail: false,
     authMode: 'assinaturaTela',
   });
@@ -348,7 +331,10 @@ async function montarSigners(idCandidato: string, idVaga: string): Promise<Signe
 
   const vistos = new Set<string>();
   const unicos: SignerDraft[] = [];
-  for (const item of drafts) {
+  const prioridade = (item: SignerDraft) =>
+    item.externalId.startsWith('candidato=') || item.externalId.startsWith('responsavel-candidato=');
+  const ordenados = [...drafts.filter(prioridade), ...drafts.filter((item) => !prioridade(item))];
+  for (const item of ordenados) {
     if (item.sendEmail) {
       const chave = item.email.toLowerCase();
       if (vistos.has(chave)) continue;
@@ -519,7 +505,7 @@ export async function aplicarZapNoBanco(idAssinatura: number, zap: ZapDoc): Prom
       [
         signer.status || 'new',
         signer.signed_at || null,
-        signer.name || '',
+        texto(signer.external_id).startsWith('agente=') ? 'DNA Work' : signer.name || '',
         signer.email || '',
         idAssinatura,
         signer.token,
