@@ -20,3 +20,31 @@ export function hrefDetalhe(idCandidato: string, idVaga?: string | null): string
   const base = `/banco-candidatos/${encodeURIComponent(idCandidato)}`;
   return idVaga ? `${base}?vaga=${encodeURIComponent(idVaga)}` : base;
 }
+
+/** O legado grava itens de `atribu_contrato` colados (`balcãoReposição`). */
+export function normalizarResumoAtividades(value: string | null | undefined): string {
+  if (!value) return '';
+  let text = String(value)
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:p|div|li|tr|h[1-6])>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/\t+/g, '\n');
+
+  text = text.replace(/([a-zàáâãéêíóôõúç])([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ])/gu, '$1\n$2');
+  text = text.replace(/([.!?])([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ])/gu, '$1\n$2');
+  text = text.replace(/([^\s\n])(\d+\.\s)/g, '$1\n$2');
+
+  return text
+    .replace(/[ \u00a0]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}

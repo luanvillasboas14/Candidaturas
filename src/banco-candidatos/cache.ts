@@ -49,3 +49,29 @@ export function cacheClearLista(): void {
   }
   keys.forEach((key) => store.removeItem(key));
 }
+
+export function storeGet<T>(key: string): T | null {
+  const store = readStore();
+  if (!store) return null;
+  try {
+    const raw = store.getItem(PREFIX + key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+export function storeSet<T>(key: string, data: T): void {
+  const store = readStore();
+  if (!store) return;
+  try {
+    store.setItem(PREFIX + key, JSON.stringify(data));
+  } catch {
+    // quota cheia: ignora
+  }
+}
+
+export function storeRemove(key: string): void {
+  readStore()?.removeItem(PREFIX + key);
+}

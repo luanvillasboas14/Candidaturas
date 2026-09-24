@@ -1,6 +1,6 @@
 # Banco de Candidatos
 
-Rotas: `/banco-candidatos` (lista) e `/banco-candidatos/[id]` (detalhe + Demitir). A lista carrega sozinha. **Ver Detalhes** abre a página do candidato. Lista, opções e detalhe ficam em `sessionStorage` por 10 minutos; voltar à tela usa o cache. **Buscar** força atualização. Depois de demitir, o cache da lista é limpo.
+Rotas: `/banco-candidatos` (lista) e `/banco-candidatos/[id]` (detalhe + Demitir). A lista carrega sozinha. **Ver Detalhes** abre a página do candidato. Lista, opções e detalhe ficam em `sessionStorage` por 10 minutos; voltar à tela usa o cache. Os filtros aplicados (e a página) ficam na sessão até **Limpar filtros** ou fechar a aba. **Buscar** força atualização. Depois de demitir, o cache da lista é limpo.
 
 Demitir só aparece se houver contratação ativa (`conratacaovaga.status = 1`) e a vaga for estágio (`tipo_vaga = 1`). Sem isso, o formulário não entra.
 
@@ -15,7 +15,7 @@ Status (`vw_candidato_status`: `disponivel`, `encaminhado`, `contratado`, `demit
 
 Demitir exige prévia da Rescisão estágio ensino médio antes de gravar. **Gerar prévia** abre `/banco-candidatos/previa` em página inteira (sem aba lateral) para leitura. A barra tem **Imprimir** (janela de impressão) e **Salvar em PDF** (download do arquivo). Sem marca DNAWORK e sem Ref. no documento. Depois de salvar, abre `/banco-candidatos/documento/[id]` do mesmo jeito. A ficha sempre mostra documentos (`contratos_gerados` + `texto_contrato`) e ocorrências. Não gera Termo de Compromisso de Estágio.
 
-Demitir pede motivo em contrato (só as 2 frases), data, avaliação de desempenho, resumo das atividades (pré-preenche `vaga.atribu_contrato`) e motivo interno (não entra no documento). Bloqueia se já existir `demissao` para o mesmo `id_candidato` + `id_vaga`. Só gera documento quando `vaga.tipo_vaga = 1` (Estágio).
+Demitir pede motivo em contrato (só as 2 frases), data, avaliação de desempenho, resumo das atividades (pré-preenche `vaga.atribu_contrato`, quebrando itens que o legado cola sem espaço) e motivo interno (não entra no documento). Bloqueia se já existir `demissao` para o mesmo `id_candidato` + `id_vaga`. Só gera documento quando `vaga.tipo_vaga = 1` (Estágio).
 
 ## Documento
 Um único termo, o texto do PDF Recisão Modelo Novo (`templates/recisao-modelo-novo.html`), gravado com o nome **Rescisão estágio ensino médio**. Não usa os termos antigos nem a tabela `cabecalho`. Só preenche os buracos. Endereço da DNA Work é o do modelo (R. do Bosque, 1621, Loja 02, São Paulo/SP, CEP 01136-001, CNPJ 40.380.163/0001-61). `Ref.: TCE/[código]` vem do TCE já existente. Data do TCE nos considerandos = `conratacaovaga.datafim`. Cláusula 3 (ii) = `datainicio` até a data da demissão. Tipo de estágio marca `( X )` em Não Obrigatório. Avaliação é escolhida por botões. Resumo (cláusula 3-i) vem de `vaga.atribu_contrato`. O HTML vai para `texto_contrato`.

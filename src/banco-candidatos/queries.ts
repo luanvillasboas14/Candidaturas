@@ -12,6 +12,7 @@ import type {
   OcorrenciaCandidato,
 } from './types';
 import { isStatusCandidato } from './types';
+import { normalizarResumoAtividades } from './ui';
 
 function idadeDe(dataNasc: string | null): number | null {
   if (!dataNasc) return null;
@@ -393,7 +394,7 @@ export async function getCandidatoDetalhe(
     encaminhamentoEmpresa: encRows[0]?.empresa || null,
     documentos: await listarDocumentos(idCandidato),
     ocorrencias: await listarOcorrencias(idCandidato),
-    atribuicoes: row.atribu_contrato || null,
+    atribuicoes: normalizarResumoAtividades(row.atribu_contrato) || null,
   };
 }
 

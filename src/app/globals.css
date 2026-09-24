@@ -1296,6 +1296,13 @@ select option {
   transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
 }
 
+.banco-filtro-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
 .ativacao-resumo .ativacao-page-btn:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);

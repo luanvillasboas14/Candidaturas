@@ -4,6 +4,7 @@ import type { PoolConnection } from 'mysql2/promise';
 import type { DnaRow } from '@/lib/dna-work-db';
 import { dataBr } from './queries';
 import { AVALIACOES_DESEMPENHO, type AvaliacaoDesempenho } from './types';
+import { normalizarResumoAtividades } from './ui';
 
 function texto(value: unknown): string {
   if (value == null) return '';
@@ -75,7 +76,7 @@ export async function montarDocumentoRecisao(
   if (!AVALIACOES_DESEMPENHO.includes(input.avaliacao)) {
     throw new Error('Avaliação de desempenho inválida.');
   }
-  const resumo = texto(input.resumoAtividades);
+  const resumo = normalizarResumoAtividades(input.resumoAtividades);
   if (!resumo) throw new Error('Resumo das atividades é obrigatório.');
 
   const [candRows] = await conn.query<DnaRow[]>(

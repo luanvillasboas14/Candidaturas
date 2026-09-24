@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AVALIACOES_DESEMPENHO, MOTIVOS_DEMISSAO, STATUS_LABEL, type CandidatoDetalhe } from './types';
 import { cacheClearLista, cacheGet, cacheSet } from './cache';
-import { brToIso, maskBrDate } from './ui';
+import { brToIso, maskBrDate, normalizarResumoAtividades } from './ui';
 
 function Campo({ label, valor }: { label: string; valor?: string | null }) {
   const texto = valor?.toString().trim();
@@ -41,7 +41,7 @@ export function CandidatoDetalheDashboard({
     const cached = cacheGet<CandidatoDetalhe>(cacheKey);
     if (cached) {
       setDetalhe(cached);
-      setResumoAtividades((atual) => atual || cached.atribuicoes || '');
+      setResumoAtividades((atual) => atual || normalizarResumoAtividades(cached.atribuicoes));
     }
     const qs = idVaga ? `?vagaId=${encodeURIComponent(idVaga)}` : '';
     void fetch(`/api/banco-candidatos/${encodeURIComponent(idCandidato)}${qs}`)
@@ -50,7 +50,7 @@ export function CandidatoDetalheDashboard({
         if (!res.ok) throw new Error(json.error || 'Falha ao abrir o candidato.');
         setDetalhe(json);
         cacheSet(cacheKey, json);
-        setResumoAtividades((atual) => atual || json.atribuicoes || '');
+        setResumoAtividades((atual) => atual || normalizarResumoAtividades(json.atribuicoes));
       })
       .catch((error) => {
         if (cached) return;
@@ -258,7 +258,7 @@ export function CandidatoDetalheDashboard({
                 setResumoAtividades(e.target.value);
                 setPreviu(false);
               }}
-              rows={4}
+              rows={6}
             />
           </label>
           <label>

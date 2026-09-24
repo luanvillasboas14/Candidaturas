@@ -2,9 +2,43 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { STATUS_CANDIDATO, STATUS_LABEL, type CandidatoLista, type FormacaoOpcao, type ModalidadeOpcao, type StatusFiltro } from './types';
-import { cacheGet, cacheSet } from './cache';
+import { STATUS_CANDIDATO, STATUS_LABEL, isStatusFiltro, type CandidatoLista, type FormacaoOpcao, type ModalidadeOpcao, type StatusFiltro } from './types';
+import { cacheGet, cacheSet, storeGet, storeRemove, storeSet } from './cache';
 import { brToIso, formatCep, hrefDetalhe, maskBrDate } from './ui';
+
+const FILTROS_KEY = 'filtros';
+
+type FiltrosLista = {
+  nome: string;
+  cadastroDe: string;
+  cadastroAte: string;
+  cargo: string;
+  cep: string;
+  raioKm: string;
+  formacao: string;
+  salarioMin: string;
+  salarioMax: string;
+  tipoContratacao: string;
+  status: StatusFiltro;
+  page: number;
+};
+
+function filtrosVazios(): FiltrosLista {
+  return {
+    nome: '',
+    cadastroDe: '',
+    cadastroAte: '',
+    cargo: '',
+    cep: '',
+    raioKm: '',
+    formacao: '',
+    salarioMin: '',
+    salarioMax: '',
+    tipoContratacao: '',
+    status: 'todos',
+    page: 1,
+  };
+}
 
 type ListaResponse = {
   total: number;
@@ -33,6 +67,38 @@ export function BancoCandidatosDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
 
+  function filtrosAtuais(): FiltrosLista {
+    return {
+      nome,
+      cadastroDe,
+      cadastroAte,
+      cargo,
+      cep,
+      raioKm,
+      formacao,
+      salarioMin,
+      salarioMax,
+      tipoContratacao,
+      status,
+      page,
+    };
+  }
+
+  function hidratarFiltros(f: FiltrosLista) {
+    setNome(f.nome);
+    setCadastroDe(f.cadastroDe);
+    setCadastroAte(f.cadastroAte);
+    setCargo(f.cargo);
+    setCep(f.cep);
+    setRaioKm(f.raioKm);
+    setFormacao(f.formacao);
+    setSalarioMin(f.salarioMin);
+    setSalarioMax(f.salarioMax);
+    setTipoContratacao(f.tipoContratacao);
+    setStatus(isStatusFiltro(f.status) ? f.status : 'todos');
+    setPage(f.page || 1);
+  }
+
   useEffect(() => {
     const opcoes = cacheGet<{ formacoes: FormacaoOpcao[]; modalidades: ModalidadeOpcao[] }>('opcoes');
     if (opcoes) {
@@ -48,35 +114,41 @@ export function BancoCandidatosDashboard() {
         })
         .catch(() => undefined);
     }
-    void buscar(1);
+    const salvos = storeGet<FiltrosLista>(FILTROS_KEY);
+    const filtros = salvos ? { ...filtrosVazios(), ...salvos } : filtrosVazios();
+    if (!isStatusFiltro(filtros.status)) filtros.status = 'todos';
+    hidratarFiltros(filtros);
+    void buscar(filtros.page || 1, false, filtros);
   }, []);
 
-  function montarParams(proxima: number): string {
+  function montarParams(filtros: FiltrosLista, proxima: number): string {
     const params = new URLSearchParams();
-    if (nome.trim().length >= 3) params.set('nome', nome.trim());
-    const de = brToIso(cadastroDe);
-    const ate = brToIso(cadastroAte);
+    if (filtros.nome.trim().length >= 3) params.set('nome', filtros.nome.trim());
+    const de = brToIso(filtros.cadastroDe);
+    const ate = brToIso(filtros.cadastroAte);
     if (de) params.set('cadastroDe', de);
     if (ate) params.set('cadastroAte', ate);
-    if (cargo.trim()) params.set('cargo', cargo.trim());
-    if (cep.replace(/\D/g, '').length === 8 && raioKm) {
-      params.set('cep', cep);
-      params.set('raioKm', raioKm);
+    if (filtros.cargo.trim()) params.set('cargo', filtros.cargo.trim());
+    if (filtros.cep.replace(/\D/g, '').length === 8 && filtros.raioKm) {
+      params.set('cep', filtros.cep);
+      params.set('raioKm', filtros.raioKm);
     }
-    if (formacao) params.set('formacao', formacao);
-    if (salarioMin) params.set('salarioMin', salarioMin);
-    if (salarioMax) params.set('salarioMax', salarioMax);
-    if (tipoContratacao) params.set('tipoContratacao', tipoContratacao);
-    if (status && status !== 'todos') params.set('status', status);
+    if (filtros.formacao) params.set('formacao', filtros.formacao);
+    if (filtros.salarioMin) params.set('salarioMin', filtros.salarioMin);
+    if (filtros.salarioMax) params.set('salarioMax', filtros.salarioMax);
+    if (filtros.tipoContratacao) params.set('tipoContratacao', filtros.tipoContratacao);
+    if (filtros.status && filtros.status !== 'todos') params.set('status', filtros.status);
     params.set('page', String(proxima));
     params.set('pageSize', '50');
     return params.toString();
   }
 
-  async function buscar(proxima = 1, forcar = false) {
+  async function buscar(proxima = 1, forcar = false, filtros?: FiltrosLista) {
+    const usados = filtros ?? filtrosAtuais();
     setErrorMessage('');
     setPage(proxima);
-    const query = montarParams(proxima);
+    storeSet(FILTROS_KEY, { ...usados, page: proxima });
+    const query = montarParams(usados, proxima);
     const cacheKey = `lista:${query}`;
     if (!forcar) {
       const cached = cacheGet<ListaResponse>(cacheKey);
@@ -99,6 +171,27 @@ export function BancoCandidatosDashboard() {
       setIsLoading(false);
     }
   }
+
+  function limparFiltros() {
+    const vazios = filtrosVazios();
+    hidratarFiltros(vazios);
+    storeRemove(FILTROS_KEY);
+    void buscar(1, true, vazios);
+  }
+
+  const temFiltro = Boolean(
+    nome.trim() ||
+      cadastroDe ||
+      cadastroAte ||
+      cargo.trim() ||
+      formacao ||
+      tipoContratacao ||
+      status !== 'todos' ||
+      cep.replace(/\D/g, '') ||
+      raioKm ||
+      salarioMin ||
+      salarioMax
+  );
 
   return (
     <div className="banco-dashboard">
@@ -179,9 +272,14 @@ export function BancoCandidatosDashboard() {
       </div>
 
       <div className="ativacao-resumo">
-        <button type="button" className="ativacao-page-btn" onClick={() => void buscar(1, true)} disabled={isLoading}>
-          {isLoading ? 'Buscando…' : 'Buscar'}
-        </button>
+        <div className="banco-filtro-acoes">
+          <button type="button" className="ativacao-page-btn" onClick={() => void buscar(1, true)} disabled={isLoading}>
+            {isLoading ? 'Buscando…' : 'Buscar'}
+          </button>
+          <button type="button" className="ativacao-page-btn" onClick={limparFiltros} disabled={isLoading || !temFiltro}>
+            Limpar filtros
+          </button>
+        </div>
         {data ? (
           <span>
             Mostrando {data.total === 0 ? 0 : (data.page - 1) * data.pageSize + 1}–
