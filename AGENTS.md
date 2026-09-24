@@ -32,6 +32,9 @@ Quando criar ou alterar rota, tabela, variável de ambiente ou regra de negócio
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME` — Postgres Cruzeiro (`dcz_sync`)
 - `DNA_WORK_DB_HOST`, `DNA_WORK_DB_PORT`, `DNA_WORK_DB_USER`, `DNA_WORK_DB_PASS`, `DNA_WORK_DB_NAME` — MySQL legado `dna_work` (Lightsail/RDS). Só no `.env` / EasyPanel.
 - `DNA_WORK_OPERATOR_USER` (opcional) — usuário gravado em `contratos_gerados` / `log_diversos` na demissão
+- `ZAPSIGN_API_TOKEN`, `ZAPSIGN_API_URL` — envelope de assinatura. Só no `.env` / EasyPanel.
+- `ZAPSIGN_USER_TOKEN` (opcional) — assinatura automática da DNA; vazio = envio das outras partes segue
+- `ZAPSIGN_AGENTE_ID` (opcional, padrão `127`)
 
 ## Compartilhado
 - `src/components/` — shell, tema.

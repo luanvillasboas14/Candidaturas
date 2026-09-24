@@ -1672,6 +1672,13 @@ button.banco-list-link {
 
 .app-shell-print {
   background: #e8e8e8;
+  color: #1d1e4c;
+  --text: #1d1e4c;
+  --text-muted: #64748b;
+  --card: #ffffff;
+  --card-border: rgba(13, 17, 33, 0.12);
+  --input-bg: #ffffff;
+  --input-border: rgba(13, 17, 33, 0.16);
 }
 
 .app-shell-print .app-content {
@@ -1681,6 +1688,84 @@ button.banco-list-link {
 .banco-print {
   max-width: 210mm;
   margin: 0 auto;
+}
+
+.banco-doc-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 1.2rem;
+  margin: 0 0 1rem;
+}
+
+.banco-doc-meta p {
+  margin: 0;
+}
+
+.banco-doc-meta strong {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.banco-assinatura {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0 0 1.4rem;
+  padding: 1rem;
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+}
+
+.banco-assinatura h3 {
+  margin: 0;
+}
+
+.banco-assinatura table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.banco-assinatura th,
+.banco-assinatura td {
+  text-align: left;
+  padding: 0.4rem 0.35rem;
+  border-bottom: 1px solid var(--card-border);
+  vertical-align: top;
+}
+
+.banco-aviso {
+  color: var(--text-muted);
+}
+
+.banco-confirmar {
+  max-width: 420px;
+  margin: 3rem auto;
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem 1.6rem;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #1d1e4c;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+}
+
+.banco-confirmar h2,
+.banco-confirmar p {
+  margin: 0;
+  color: #1d1e4c;
+}
+
+.banco-confirmar .banco-aviso,
+.banco-confirmar .error {
+  color: #991b1b;
+}
+
+.banco-confirmar .ativacao-page-btn {
+  padding: 10px 16px;
+  background: #fff;
+  border: 1px solid rgba(13, 17, 33, 0.22);
+  color: #1d1e4c;
 }
 
 .banco-print-doc {
@@ -1724,10 +1809,9 @@ button.banco-list-link {
 }
 
 .recisao-cols {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px 28px;
+  width: 100%;
   margin-bottom: 8px;
+  border-collapse: collapse;
 }
 
 .recisao-col-title {
@@ -1749,21 +1833,15 @@ button.banco-list-link {
 }
 
 .recisao-assinaturas {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 36px 28px;
+  width: 100%;
   margin-top: 36px;
+  border-collapse: collapse;
 }
 
-.recisao-assinaturas p {
-  margin: 0;
+.recisao-assinaturas td {
   text-align: center;
   font-weight: 700;
-}
-
-.recisao-assinatura-full {
-  grid-column: 1 / -1;
-  padding-top: 12px;
+  padding: 28px 8px 0;
 }
 
 .banco-print-doc sup {
@@ -1817,6 +1895,8 @@ button.banco-list-link {
 
   .banco-print-bar,
   .banco-print-acoes,
+  .banco-doc-meta,
+  .banco-assinatura,
   .sidebar,
   .banco-voltar,
   .ativacao-page-btn {

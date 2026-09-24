@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getTextoContrato } from '@/banco-candidatos/queries';
+import { getDocumentoTela } from '@/banco-candidatos/assinatura';
 
 export const runtime = 'nodejs';
 
@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const data = await getTextoContrato(id);
+    const data = await getDocumentoTela(id);
     if (!data) return NextResponse.json({ error: 'Documento não encontrado.' }, { status: 404 });
     return NextResponse.json(data);
   } catch (error) {

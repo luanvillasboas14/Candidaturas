@@ -82,9 +82,8 @@ export async function demitirCandidato(input: {
   motivoInterno: string;
   avaliacao: string;
   resumoAtividades: string;
-  previu: boolean;
+  previu?: boolean;
 }): Promise<{ idContrato: number; html: string }> {
-  if (!input.previu) throw new Error('Gere a prévia do documento antes de demitir.');
   const dataFim = validarDemissao(input);
 
   return withDnaWorkTransaction(async (conn) => {
@@ -119,8 +118,8 @@ export async function demitirCandidato(input: {
     const [insertGerado] = await conn.query(
       `
       INSERT INTO contratos_gerados
-        (id_contrato, id_empresa, id_candidato, nome_contrato, status, data, vaga, datainicio, datafim, id_usuario)
-      VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
+        (id_contrato, id_empresa, id_candidato, nome_contrato, status, data, vaga, datainicio, datafim, id_usuario, chave)
+      VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, UUID())
       `,
       [
         modeloRows[0]?.id_contrato ?? null,

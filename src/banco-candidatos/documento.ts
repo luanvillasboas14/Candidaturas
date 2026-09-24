@@ -53,6 +53,15 @@ function responsavelLegal(cand: DnaRow): { nome: string; cpf: string; contato: s
   return { nome: '', cpf: '', contato: '' };
 }
 
+let modeloCache = '';
+
+function modeloRecisao(): string {
+  if (!modeloCache) {
+    modeloCache = readFileSync(path.join(process.cwd(), 'templates', 'recisao-modelo-novo.html'), 'utf8');
+  }
+  return modeloCache;
+}
+
 function substituir(modelo: string, vars: Record<string, string>): string {
   let out = modelo;
   const keys = Object.keys(vars).sort((a, b) => b.length - a.length);
@@ -179,7 +188,7 @@ export async function montarDocumentoRecisao(
     DATA_ASSINATURA: escapeHtml(dataBr(input.dataDemissao) || ''),
   };
 
-  const modelo = readFileSync(path.join(process.cwd(), 'templates', 'recisao-modelo-novo.html'), 'utf8');
+  const modelo = modeloRecisao();
   return {
     html: substituir(modelo, vars),
     numeroContrato: texto(tceRows[0]?.id_contratogerado),

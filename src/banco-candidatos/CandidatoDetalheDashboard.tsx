@@ -35,27 +35,32 @@ export function CandidatoDetalheDashboard({
   const [carregandoPrevia, setCarregandoPrevia] = useState(false);
   const [demitindo, setDemitindo] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [confirmarUrl, setConfirmarUrl] = useState('');
 
-  useEffect(() => {
+  async function carregarDetalhe(usarCache: boolean) {
     const cacheKey = `detalhe:${idCandidato}:${idVaga || ''}`;
-    const cached = cacheGet<CandidatoDetalhe>(cacheKey);
-    if (cached) {
-      setDetalhe(cached);
-      setResumoAtividades((atual) => atual || normalizarResumoAtividades(cached.atribuicoes));
+    if (usarCache) {
+      const cached = cacheGet<CandidatoDetalhe>(cacheKey);
+      if (cached) {
+        setDetalhe(cached);
+        setResumoAtividades((atual) => atual || normalizarResumoAtividades(cached.atribuicoes));
+      }
     }
     const qs = idVaga ? `?vagaId=${encodeURIComponent(idVaga)}` : '';
-    void fetch(`/api/banco-candidatos/${encodeURIComponent(idCandidato)}${qs}`)
-      .then(async (res) => {
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Falha ao abrir o candidato.');
-        setDetalhe(json);
-        cacheSet(cacheKey, json);
-        setResumoAtividades((atual) => atual || normalizarResumoAtividades(json.atribuicoes));
-      })
-      .catch((error) => {
-        if (cached) return;
-        setErrorMessage(error instanceof Error ? error.message : 'Falha ao abrir o candidato.');
-      });
+    const res = await fetch(`/api/banco-candidatos/${encodeURIComponent(idCandidato)}${qs}`);
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Falha ao abrir o candidato.');
+    setDetalhe(json);
+    cacheSet(cacheKey, json);
+    setResumoAtividades((atual) => atual || normalizarResumoAtividades(json.atribuicoes));
+    return json as CandidatoDetalhe;
+  }
+
+  useEffect(() => {
+    void carregarDetalhe(true).catch((error) => {
+      if (cacheGet<CandidatoDetalhe>(`detalhe:${idCandidato}:${idVaga || ''}`)) return;
+      setErrorMessage(error instanceof Error ? error.message : 'Falha ao abrir o candidato.');
+    });
   }, [idCandidato, idVaga]);
 
   const formValido = Boolean(motivo) && Boolean(brToIso(dataDemissao)) && Boolean(avaliacao) && Boolean(resumoAtividades.trim());
@@ -107,10 +112,26 @@ export function CandidatoDetalheDashboard({
     }
   }
 
+  function abrirAbaCarregando(): Window | null {
+    const aba = window.open('about:blank', '_blank');
+    if (!aba) return null;
+    aba.document.open();
+    aba.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Assinatura digital</title>
+<style>
+  body{margin:0;min-height:100vh;background:#e8e8e8;color:#1d1e4c;font-family:'Segoe UI',system-ui,sans-serif}
+  .banco-confirmar{max-width:420px;margin:3rem auto;padding:1.5rem 1.6rem;border-radius:16px;background:#fff;box-shadow:0 8px 28px rgba(0,0,0,.12);display:grid;gap:1rem}
+  h2,p{margin:0}
+</style></head><body><div class="banco-confirmar"><h2>Assinatura digital</h2><p>Gerando a rescisão…</p></div></body></html>`);
+    aba.document.close();
+    return aba;
+  }
+
   async function demitir() {
-    if (!detalhe?.idVaga || !previu) return;
+    if (!detalhe?.idVaga || !formValido) return;
+    const aba = abrirAbaCarregando();
     setDemitindo(true);
     setStatusMessage('');
+    setConfirmarUrl('');
     try {
       const res = await fetch('/api/banco-candidatos/demitir', {
         method: 'POST',
@@ -123,22 +144,27 @@ export function CandidatoDetalheDashboard({
           motivoInterno,
           avaliacao,
           resumoAtividades: resumoAtividades.trim(),
-          previu: true,
+          previu: previu,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Falha ao demitir.');
       setStatusMessage('Demissão gravada. O documento único foi gerado.');
-      const atualizado = { ...detalhe, jaDemitido: true, contratado: false };
-      setDetalhe(atualizado);
-      cacheSet(`detalhe:${detalhe.idCandidato}:${detalhe.idVaga || ''}`, atualizado);
-      cacheClearLista();
       if (json.idContrato) {
-        window.open(`/banco-candidatos/documento/${json.idContrato}`, '_blank');
+        const url = `/banco-candidatos/documento/${json.idContrato}/confirmar`;
+        if (aba) aba.location.replace(url);
+        else setConfirmarUrl(url);
+      } else {
+        aba?.close();
       }
-      const reload = await fetch(`/api/banco-candidatos/${encodeURIComponent(detalhe.idCandidato)}?vagaId=${encodeURIComponent(detalhe.idVaga)}`);
-      if (reload.ok) setDetalhe(await reload.json());
+      cacheClearLista();
+      try {
+        await carregarDetalhe(false);
+      } catch {
+        setDetalhe({ ...detalhe, jaDemitido: true, contratado: false });
+      }
     } catch (error) {
+      aba?.close();
       setStatusMessage(error instanceof Error ? error.message : 'Falha ao demitir.');
     } finally {
       setDemitindo(false);
@@ -161,7 +187,7 @@ export function CandidatoDetalheDashboard({
   }
 
   const podeDemitir =
-    detalhe.contratado && detalhe.tipoVaga === 1 && !detalhe.jaDemitido && formValido && previu;
+    detalhe.contratado && detalhe.tipoVaga === 1 && !detalhe.jaDemitido && formValido;
 
   return (
     <div className="banco-detalhe">
@@ -286,6 +312,13 @@ export function CandidatoDetalheDashboard({
         <p>Demitir com documento único vale só para estágio.</p>
       ) : null}
       {statusMessage ? <p>{statusMessage}</p> : null}
+      {confirmarUrl ? (
+        <p>
+          <button type="button" className="banco-list-link" onClick={() => window.open(confirmarUrl, '_blank')}>
+            Enviar este documento para assinatura digital?
+          </button>
+        </p>
+      ) : null}
 
       <section className="banco-bloco">
         <h3>Documentos gerados</h3>

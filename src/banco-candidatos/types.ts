@@ -85,6 +85,25 @@ export type OcorrenciaCandidato = {
   data: string;
 };
 
+export type AssinanteTela = {
+  papel: string;
+  nome: string;
+  email: string;
+  status: string;
+  data: string | null;
+  token: string;
+  tipoPessoa: string;
+  podeReenviar: boolean;
+};
+
+export type EnvelopeTela = {
+  statusDoc: string;
+  linkDoc: string | null;
+  dataEnvio: string | null;
+  avisoDna: string | null;
+  assinantes: AssinanteTela[];
+};
+
 export type CandidatoDetalhe = CandidatoLista & {
   email: string | null;
   telefone: string | null;

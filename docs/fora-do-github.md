@@ -8,7 +8,8 @@ Este arquivo lista o que o app usa e **não vive neste repositório**.
 - Porta **3000**. Start command vazio (entrypoint da imagem). `docker-entrypoint.sh` força `HOSTNAME=0.0.0.0`.
 - Variáveis de ambiente do app ficam só no EasyPanel. No GitHub, o secret é só `EASYPANEL_DEPLOY_WEBHOOK`.
 - Ativação Cruzeiro lê o Postgres `dcz_sync` com `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS` e `DB_NAME`. Essas chaves vão no EasyPanel, nunca no GitHub.
-- Banco de Candidatos lê o MySQL `dna_work` (Lightsail/RDS) com `DNA_WORK_DB_*`. Master só no EasyPanel / `.env.local`. A lista é SELECT; escrita só no fluxo Demitir.
+- Banco de Candidatos lê o MySQL `dna_work` (Lightsail/RDS) com `DNA_WORK_DB_*`. Master só no EasyPanel / `.env.local`. A lista é SELECT; escrita só no fluxo Demitir e em `assinatura_digital` / `assinatura_digital_assinantes`.
+- ZapSign: `ZAPSIGN_API_TOKEN` e `ZAPSIGN_USER_TOKEN` no EasyPanel / `.env.local` (nunca no GitHub). Webhook do app: `POST https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/webhooks/zapsign`. No painel ZapSign, o webhook antigo `sistema.dnawork.ai` pode continuar; o PHP em `99estagios.com` está morto.
 - Sync de localização: `POST https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/ativacao-cruzeiro/geo-sync`. A tela também dispara se o snapshot de matriculados for novo. Um cron diário depois das 12h (Brasília) cobre o upload do dia.
 - App em produção: `https://dnaworkia-candidaturas.vkfaze.easypanel.host`
 
