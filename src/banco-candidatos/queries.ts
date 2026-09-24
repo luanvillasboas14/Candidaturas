@@ -111,8 +111,8 @@ function whereLista(filtros: FiltrosBanco): { sql: string; params: Array<string 
 
   const nome = filtros.nome?.trim() || '';
   if (nome.length >= 3) {
-    clauses.push(`c.nome LIKE ?`);
-    params.push(`${nome}%`);
+    clauses.push(`CONVERT(c.nome USING utf8mb4) COLLATE utf8mb4_0900_ai_ci LIKE ?`);
+    params.push(`%${nome}%`);
   }
   if (filtros.cadastroDe) {
     clauses.push(`DATE(c.data_adicao) >= ?`);

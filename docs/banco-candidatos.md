@@ -7,7 +7,7 @@ Demitir só aparece se houver contratação ativa (`conratacaovaga.status = 1`) 
 ## O que faz
 Consulta o banco de talentos do legado DNA Work (`dna_work` no MySQL Lightsail/RDS). Só lê na lista. Demitir (estágio) gera **um** documento, a Rescisão estágio ensino médio, e grava no legado na mesma transação para o sistema antigo não quebrar.
 
-A lista pagina no MySQL: `COUNT(*)` com os mesmos filtros e depois `LIMIT 50 OFFSET`. Não puxa a base inteira. Nome só entra com 3+ letras e `LIKE 'texto%'`. Salário e raio só entram se preenchidos.
+A lista pagina no MySQL: `COUNT(*)` com os mesmos filtros e depois `LIMIT 50 OFFSET`. Não puxa a base inteira. Nome só entra com 3+ letras; a busca ignora acento (`Araujo` acha `Araújo`) e aceita o texto no meio do nome. Salário e raio só entram se preenchidos.
 
 Cada linha: encaminhado (sim/não, `emcaminhamento.reprovado IS NULL`), nome, idade, término, tipo de ensino (`flex`), instituição, curso, bairro, cidade, estado, cadastro. Distância em km só se a busca usou CEP+raio.
 
