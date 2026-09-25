@@ -51,6 +51,7 @@ No lote da checagem de 2h, incluir `vacancyTitle` (hoje vai só `idvacancy`) par
 - Campo `source` do contato vira `origem` (ex.: Instagram, Facebook, Dina Bwipo, infojobs).
 - Campo de negócio `campanha` (slug `campanha`) recebe o rótulo lido da arte ou o nome da vaga do Pandapé.
 - Tag de negócio **Infojobs** (`cmrkrdkyh1gytpn01ae77p55q`) e nota `Candidato via Infojobs` marcam origem `infojobs`.
+- Tag de negócio **Cruzeiro**: a Ativação Cruzeiro cria o lead no estágio Ativação (`cmstdsc2v04pjk101qb2s0a6q`) do Pipeline Principal. Quem já está nesse funil fora de Perdido, ou em outro pipeline, não é alterado. Em Perdido (`cf133884ea761486f9855d93ffa4862a9`) o mesmo negócio volta para Ativação (campos + tag), para o WhatsApp disparar.
 
 ## DNA Work (horários)
 - `https://sistema.dnawork.ai/webhook/empresa.php` — horários das vagas, cruzados pelo `codigo` da tabela `jobs`.

@@ -2,6 +2,7 @@ import { getCruzeiroPool } from '@/lib/cruzeiro-db';
 import { normalizePhone } from '@/lib/phone';
 import { appendVagaEnviada, listAlunosCepLocalizacoes, listTelefonesComVagaEnviada } from '@/lib/supabase-server';
 import { geocodeCep, haversineKm, normalizeCep } from '@/vagas-proximas/geo';
+import { criarLeadsCruzeiro, type AlunoLeadCruzeiro } from './crm-ativacao';
 import { nomeCursoCurto } from './curso-busca';
 import type { AlunoCruzeiro, FiltrosAtivacao, OpcoesAtivacao } from './types';
 
@@ -438,22 +439,124 @@ export async function listarAlunosAtivacao(input: FiltrosAtivacao): Promise<{
   };
 }
 
+async function listarAlunosParaAtivar(pessoaIds: string[]): Promise<AlunoLeadCruzeiro[]> {
+  const ids = [...new Set(pessoaIds.map((id) => id.trim()).filter(Boolean))];
+  if (!ids.length) return [];
+  const db = getCruzeiroPool();
+  const { rows } = await db.query<{
+    pessoaId: string;
+    nome: string;
+    email: string | null;
+    curso: string;
+    endereco: string | null;
+    bairro: string | null;
+    cidade: string | null;
+    celular: string | null;
+    phones_digits: string | null;
+    dataNasc: string | null;
+    idade: number | null;
+  }>(
+    `
+    WITH latest AS (${LATEST_MATRICULADOS}),
+    base AS (
+      SELECT
+        COALESCE(NULLIF(TRIM(r.data->>'rgm_digits'), ''), NULLIF(TRIM(r.data->>'cpf_digits'), ''), 'row-' || r.id::text) AS pessoa_id,
+        NULLIF(TRIM(r.data->>'nome'), '') AS nome,
+        NULLIF(TRIM(r.data->>'email'), '') AS email,
+        ${CURSO_GRUPO} AS curso,
+        COALESCE(NULLIF(TRIM(r.data->>'endereço'), ''), NULLIF(TRIM(r.data->>'endereco'), '')) AS endereco,
+        NULLIF(TRIM(r.data->>'bairro'), '') AS bairro,
+        NULLIF(TRIM(r.data->>'cidade'), '') AS cidade,
+        NULLIF(TRIM(r.data->>'fone_cel'), '') AS celular,
+        NULLIF(TRIM(r.data->>'phones_digits'), '') AS phones_digits,
+        NULLIF(TRIM(r.data->>'data_nasc'), '') AS data_nasc,
+        CASE
+          WHEN r.data->>'data_nasc' ~ '^\\d{2}/\\d{2}/\\d{4}$'
+          THEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, to_date(r.data->>'data_nasc', 'DD/MM/YYYY')))::int
+          WHEN r.data->>'data_nasc' ~ '^\\d{4}-\\d{2}-\\d{2}'
+          THEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, (LEFT(r.data->>'data_nasc', 10))::date))::int
+          ELSE NULL
+        END AS idade,
+        r.id
+      FROM xl_rows r
+      WHERE r.snapshot_id = (SELECT id FROM latest)
+        AND ${LINHA_VALIDA}
+    )
+    SELECT DISTINCT ON (pessoa_id)
+      pessoa_id AS "pessoaId",
+      nome,
+      email,
+      COALESCE(curso, '') AS curso,
+      endereco,
+      bairro,
+      cidade,
+      celular,
+      phones_digits,
+      data_nasc AS "dataNasc",
+      idade
+    FROM base
+    WHERE pessoa_id = ANY($1::text[])
+    ORDER BY pessoa_id, id ASC
+    `,
+    [ids]
+  );
+
+  return rows
+    .map((row) => ({
+      pessoaId: row.pessoaId,
+      nome: row.nome,
+      email: row.email,
+      telefone: telefoneAluno(row) || '',
+      curso: nomeCursoCurto(row.curso),
+      endereco: row.endereco,
+      bairro: row.bairro,
+      cidade: row.cidade,
+      dataNasc: row.dataNasc,
+      idade: row.idade,
+    }))
+    .filter((aluno) => aluno.nome && aluno.telefone);
+}
+
 export async function registrarEnvioAtivacao(input: FiltrosAtivacao): Promise<{
   gravados: number;
+  criados: number;
+  atualizados: number;
+  pulados: number;
+  falhas: string[];
   vagaId: string;
 }> {
   const vagaId = input.vagaId?.trim();
   if (!vagaId) {
     throw new Error('Escolha a vaga para registrar o envio.');
   }
-  if (!normalizeQuantidade(input.quantidade)) {
-    throw new Error('Informe quantas pessoas você quer ativar.');
+
+  const ids = [...new Set((input.pessoaIds || []).map((id) => id.trim()).filter(Boolean))];
+  let alunos: AlunoLeadCruzeiro[] = [];
+  if (ids.length) {
+    alunos = await listarAlunosParaAtivar(ids);
+  } else {
+    if (!normalizeQuantidade(input.quantidade)) {
+      throw new Error('Selecione quem vai ser ativado.');
+    }
+    const lista = await listarAlunosAtivacao({ ...input, vagaId });
+    alunos = lista.alunos.map((aluno) => ({
+      pessoaId: aluno.pessoaId,
+      nome: aluno.nome,
+      telefone: aluno.telefone,
+      curso: aluno.curso,
+      bairro: aluno.bairro,
+      idade: aluno.idade,
+    }));
+  }
+  if (!alunos.length) {
+    throw new Error('Nenhum aluno selecionado com telefone válido.');
   }
 
-  const lista = await listarAlunosAtivacao({ ...input, vagaId });
+  const { criados, atualizados, pulados, falhas, okIds } = await criarLeadsCruzeiro(alunos, vagaId);
+  const ok = new Set(okIds);
   const gravados = await appendVagaEnviada(
-    lista.alunos.map((aluno) => ({ rgm: aluno.pessoaId, telefone: aluno.telefone })),
+    alunos.filter((aluno) => ok.has(aluno.pessoaId)).map((aluno) => ({ rgm: aluno.pessoaId, telefone: aluno.telefone })),
     vagaId
   );
-  return { gravados, vagaId };
+  return { gravados, criados, atualizados, pulados, falhas, vagaId };
 }

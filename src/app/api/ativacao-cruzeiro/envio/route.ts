@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { registrarEnvioAtivacao } from '@/ativacao-cruzeiro/queries';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 function readInt(value: unknown): number | undefined {
   if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value);
@@ -22,7 +22,7 @@ function readText(value: unknown): string | undefined {
 
 function readSeries(value: unknown): string[] | undefined {
   if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === 'string');
+    return value.filter((item): item is string => typeof item === 'string' && Boolean(item.trim()));
   }
   return readText(value) ? [String(value)] : undefined;
 }
@@ -43,6 +43,7 @@ export async function POST(request: Request) {
       raioKm: readNumber(body.raioKm),
       vagaId: readText(body.vagaId),
       quantidade: readInt(body.quantidade),
+      pessoaIds: readSeries(body.pessoaIds),
     });
     return NextResponse.json(data);
   } catch (error) {

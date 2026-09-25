@@ -1274,6 +1274,17 @@ select option {
   border-bottom-color: #fff;
 }
 
+.ativacao-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.ativacao-acoes .submit-button {
+  min-width: 140px;
+}
+
 .ativacao-resumo {
   display: grid;
   grid-template-columns: minmax(180px, 240px) minmax(160px, 240px) auto;

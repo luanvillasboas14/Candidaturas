@@ -71,6 +71,7 @@ export function AtivacaoCruzeiroDashboard() {
   const [opcoes, setOpcoes] = useState<OpcoesAtivacao>({ cursos: [], series: [], sexos: [] });
   const [data, setData] = useState<ListaResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [ativando, setAtivando] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [erroVaga, setErroVaga] = useState(false);
@@ -286,6 +287,63 @@ export function AtivacaoCruzeiroDashboard() {
       : [...selecionados, pessoaId];
     setSelecionados(proximo);
     setQuantidade(proximo.length ? String(proximo.length) : '');
+  }
+
+  async function ativarSelecionados() {
+    if (!vagaId || !selecionados.length) {
+      setErrorMessage('Filtre, selecione as pessoas e clique em Ativar.');
+      return;
+    }
+    setAtivando(true);
+    setErrorMessage('');
+    setStatusMessage('');
+    try {
+      const response = await fetch('/api/ativacao-cruzeiro/envio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...filtrosEnvio(),
+          pessoaIds: selecionados,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Falha ao ativar.');
+      const criados = Number(payload.criados || 0);
+      const atualizados = Number(payload.atualizados || 0);
+      const pulados = Number(payload.pulados || 0);
+      const enviados = criados + atualizados;
+      const falhas = Array.isArray(payload.falhas) ? payload.falhas : [];
+      const partes: string[] = [];
+      if (enviados) {
+        partes.push(
+          `Mensagem enviada para ${enviados.toLocaleString('pt-BR')} pessoa${enviados === 1 ? '' : 's'}`
+        );
+      }
+      if (criados) {
+        partes.push(
+          `${criados.toLocaleString('pt-BR')} lead${criados === 1 ? '' : 's'} criado${criados === 1 ? '' : 's'} na fase Ativação`
+        );
+      }
+      if (atualizados) {
+        partes.push(
+          `${atualizados.toLocaleString('pt-BR')} em Perdido reativado${atualizados === 1 ? '' : 's'} na fase Ativação`
+        );
+      }
+      if (pulados) {
+        partes.push(
+          `${pulados.toLocaleString('pt-BR')} ignorado${pulados === 1 ? '' : 's'} por já estar no funil`
+        );
+      }
+      setStatusMessage(partes.length ? `${partes.join('. ')}.` : 'Nenhuma mensagem enviada.');
+      if (falhas.length) {
+        setErrorMessage(falhas.slice(0, 5).join(' '));
+      }
+      await carregarAlunos(1);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Falha ao ativar.');
+    } finally {
+      setAtivando(false);
+    }
   }
 
   return (
@@ -639,9 +697,19 @@ export function AtivacaoCruzeiroDashboard() {
           )}
         </div>
 
-        <button type="submit" className="submit-button" disabled={isLoading}>
-          {isLoading ? 'Filtrando…' : 'Filtrar'}
-        </button>
+        <div className="ativacao-acoes">
+          <button type="submit" className="submit-button" disabled={isLoading || ativando}>
+            {isLoading ? 'Filtrando…' : 'Filtrar'}
+          </button>
+          <button
+            type="button"
+            className="submit-button"
+            disabled={ativando || isLoading || !selecionados.length}
+            onClick={() => void ativarSelecionados()}
+          >
+            {ativando ? 'Ativando…' : 'Ativar'}
+          </button>
+        </div>
       </form>
 
       {errorMessage && <div className="message error">{errorMessage}</div>}
@@ -746,8 +814,13 @@ export function AtivacaoCruzeiroDashboard() {
                     Próxima
                   </button>
                   {selecionados.length > 0 && (
-                    <button type="button" className="ativacao-page-btn">
-                      Ativar
+                    <button
+                      type="button"
+                      className="ativacao-page-btn"
+                      disabled={ativando || isLoading}
+                      onClick={() => void ativarSelecionados()}
+                    >
+                      {ativando ? 'Ativando…' : 'Ativar'}
                     </button>
                   )}
                 </div>

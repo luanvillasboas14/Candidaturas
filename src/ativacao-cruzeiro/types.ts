@@ -30,6 +30,7 @@ export type FiltrosAtivacao = {
   raioKm?: number;
   vagaId?: string;
   quantidade?: number;
+  pessoaIds?: string[];
   page?: number;
   pageSize?: number;
 };
