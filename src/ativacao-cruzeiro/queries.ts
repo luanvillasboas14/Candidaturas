@@ -2,6 +2,7 @@ import { getCruzeiroPool } from '@/lib/cruzeiro-db';
 import { normalizePhone } from '@/lib/phone';
 import { appendVagaEnviada, listAlunosCepLocalizacoes, listTelefonesComVagaEnviada } from '@/lib/supabase-server';
 import { geocodeCep, haversineKm, normalizeCep } from '@/vagas-proximas/geo';
+import { nomeCursoCurto } from './curso-busca';
 import type { AlunoCruzeiro, FiltrosAtivacao, OpcoesAtivacao } from './types';
 
 export type { AlunoCruzeiro, FiltrosAtivacao, OpcoesAtivacao };
@@ -23,18 +24,23 @@ export const LINHA_VALIDA = `
 
 const CURSO_GRUPO = `
   TRIM(regexp_replace(
-    regexp_replace(
+    TRIM(regexp_replace(
       regexp_replace(
-        regexp_replace(TRIM(r.data->>'curso'), '\\s*\\([^)]*\\)', '', 'g'),
-        '\\s*\\(.*$', ''
+        regexp_replace(
+          regexp_replace(TRIM(r.data->>'curso'), '\\s*\\([^)]*\\)', '', 'g'),
+          '\\s*\\(.*$', ''
+        ),
+        '\\s+4\\.0I?(?:\\s+MAIS)?$',
+        '',
+        'i'
       ),
-      '\\s+4\\.0I?(?:\\s+MAIS)?$',
-      '',
-      'i'
-    ),
-    '\\s+',
-    ' ',
-    'g'
+      '\\s+',
+      ' ',
+      'g'
+    )),
+    '^(CURSO\\s+SUPERIOR\\s+DE\\s+TECNOLOGIA\\s+EM|SUPERIOR\\s+DE\\s+TECNOLOGIA\\s+EM|CST|BACHARELADO|BACHAREL|LICENCIATURA|TECNOLOGO|TECN[OÓ]LOGO|TECNICO|T[EÉ]CNICO|GRADUACAO|GRADUA[CÇ][AÃ]O)(\\s+DE)?\\s+(EM|DE)\\s+',
+    '',
+    'i'
   ))
 `;
 
@@ -246,7 +252,7 @@ export async function listarOpcoesAtivacao(): Promise<OpcoesAtivacao> {
   ]);
 
   return {
-    cursos: cursos.rows.map((row) => row.curso).filter(Boolean),
+    cursos: cursos.rows.map((row) => nomeCursoCurto(row.curso)).filter(Boolean),
     series: series.rows.map((row) => row.serie),
     sexos: [
       { valor: 'F', label: 'Feminino' },
@@ -274,7 +280,7 @@ async function aplicarLocalizacao(
     return alunos.map((row) => ({
       pessoaId: row.pessoaId,
       nome: row.nome,
-      curso: row.curso,
+      curso: nomeCursoCurto(row.curso),
       serie: row.serie,
       idade: row.idade,
       polo: row.polo,
@@ -329,7 +335,7 @@ async function aplicarLocalizacao(
     filtrados.push({
       pessoaId: row.pessoaId,
       nome: row.nome,
-      curso: row.curso,
+      curso: nomeCursoCurto(row.curso),
       serie: row.serie,
       idade: row.idade,
       polo: row.polo,
@@ -397,7 +403,7 @@ export async function listarAlunosAtivacao(input: FiltrosAtivacao): Promise<{
     : lista.rows.map((row) => ({
         pessoaId: row.pessoaId,
         nome: row.nome,
-        curso: row.curso,
+        curso: nomeCursoCurto(row.curso),
         serie: row.serie,
         idade: row.idade,
         polo: row.polo,

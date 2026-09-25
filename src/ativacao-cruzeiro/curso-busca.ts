@@ -42,6 +42,17 @@ const ALIASES: Record<string, string[]> = {
   adsistemas: ['analise e desenvolvimento de sistemas'],
 };
 
+export function nomeCursoCurto(curso: string): string {
+  return curso
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(
+      /^(curso\s+superior\s+de\s+tecnologia\s+em|superior\s+de\s+tecnologia\s+em|cst|bacharelado|bacharel|licenciatura|tecn[oó]logo|t[eé]cnico|gradua[cç][aã]o)(\s+de)?\s+(em|de)\s+/i,
+      ''
+    )
+    .trim();
+}
+
 function fold(value: string): string {
   return value
     .normalize('NFD')
