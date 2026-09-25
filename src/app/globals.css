@@ -1738,7 +1738,32 @@ button.banco-list-link {
   color: var(--text-muted);
 }
 
+.banco-confirmar-tela {
+  position: relative;
+  min-height: 100vh;
+}
+
+.banco-confirmar-tela::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: #e8e8e8;
+  z-index: 1;
+}
+
+.banco-pdf-captura {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 794px;
+  opacity: 1;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .banco-confirmar {
+  position: relative;
+  z-index: 2;
   max-width: 420px;
   margin: 3rem auto;
   display: grid;
