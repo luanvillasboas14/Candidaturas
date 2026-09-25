@@ -48,6 +48,10 @@ function rotuloVaga(vaga: JobOption): string {
   return vaga.bairro ? `${vaga.title} — ${vaga.bairro}` : vaga.title;
 }
 
+function foldTexto(value: string): string {
+  return value.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('pt-BR');
+}
+
 export function AtivacaoCruzeiroDashboard() {
   const [idadeMin, setIdadeMin] = useState('');
   const [idadeMax, setIdadeMax] = useState('');
@@ -473,14 +477,24 @@ export function AtivacaoCruzeiroDashboard() {
                 value={cursoAberto ? cursoBusca : cursos.join(', ')}
                 onFocus={() => {
                   setCursoAberto(true);
-                  setCursoBusca('');
+                  setCursoBusca(cursos.join(', '));
                 }}
                 onChange={(event) => {
-                  setCursoBusca(event.target.value);
+                  const value = event.target.value;
+                  setCursoBusca(value);
                   setCursoAberto(true);
+                  if (!value.trim()) {
+                    setCursos([]);
+                    return;
+                  }
+                  const digitado = foldTexto(value);
+                  setCursos((atual) => atual.filter((item) => digitado.includes(foldTexto(item))));
                 }}
                 onBlur={() => {
-                  window.setTimeout(() => setCursoAberto(false), 150);
+                  window.setTimeout(() => {
+                    setCursoAberto(false);
+                    setCursoBusca('');
+                  }, 150);
                 }}
               />
               {cursoAberto && cursosFiltrados.length > 0 && (
