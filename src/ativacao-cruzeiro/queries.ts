@@ -264,7 +264,7 @@ export async function listarOpcoesAtivacao(): Promise<OpcoesAtivacao> {
 
 type AlunoQueryRow = AlunoCruzeiro & { phones_digits?: string | null };
 
-function telefoneAluno(row: AlunoQueryRow): string | null {
+function telefoneAluno(row: { phones_digits?: string | null; celular?: string | null }): string | null {
   return normalizePhone(row.phones_digits || row.celular || '');
 }
 
