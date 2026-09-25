@@ -140,7 +140,7 @@ function camposAtivacao(aluno: AlunoLeadCruzeiro, phoneNorm: string, titulo: str
       { name: 'campanha', value: TAG_CRUZEIRO },
       { name: 'curso', value: curso },
       { name: 'titulovaga1', value: titulo },
-    ].filter((field) => field.value),
+    ].filter((field): field is { name: string; value: string } => Boolean(field.value)),
   };
 }
 
