@@ -22,10 +22,16 @@ interface CampanhaItem {
   quantidade: number;
 }
 
+interface GanhosData {
+  total: number;
+  campanhas: CampanhaItem[];
+}
+
 interface DashboardData {
   total: number;
   origens: OrigemItem[];
   campanhas: CampanhaItem[];
+  ganhos?: GanhosData;
 }
 
 interface PieSlice {
@@ -491,30 +497,57 @@ export function OrigemDashboard() {
 
       {isLoading && <p className="subtitle">Carregando origem dos candidatos…</p>}
       {errorMessage && <div className="message error">{errorMessage}</div>}
-      {!isLoading && !errorMessage && data && data.total === 0 && (
-        <p className="subtitle">Nenhum lead nesse período.</p>
-      )}
+      {!isLoading && !errorMessage && data && (
+        <div className="origem-columns">
+          <div className="origem-panel">
+            {data.total === 0 ? (
+              <p className="subtitle">Nenhum lead nesse período.</p>
+            ) : (
+              <>
+                <div className="origem-kpi">
+                  <span>Total de leads</span>
+                  <strong>{data.total}</strong>
+                </div>
 
-      {!isLoading && !errorMessage && data && data.total > 0 && (
-        <>
-          <div className="origem-kpi">
-            <span>Total de leads</span>
-            <strong>{data.total}</strong>
+                <section>
+                  <h2>Canais</h2>
+                  <CanalPie origens={data.origens} />
+                </section>
+
+                <section>
+                  <h2>Campanhas</h2>
+                  {data.campanhas.length === 0 ? (
+                    <p className="subtitle">Nenhuma campanha nomeada nesse período.</p>
+                  ) : (
+                    <ul className="origem-campaigns">
+                      {data.campanhas.map((item) => (
+                        <li key={`${item.origem}-${item.campanha}`}>
+                          <div>
+                            <strong>{item.campanha}</strong>
+                            <span>{item.origem}</span>
+                          </div>
+                          <em>{item.quantidade}</em>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </>
+            )}
           </div>
 
-          <section>
-            <h2>Canais</h2>
-            <CanalPie origens={data.origens} />
-          </section>
-
-          <section>
-            <h2>Campanhas</h2>
-            {data.campanhas.length === 0 ? (
-              <p className="subtitle">Nenhuma campanha nomeada nesse período.</p>
+          <section className="origem-panel">
+            <h2>Campanhas dos ganhos</h2>
+            <div className="origem-kpi">
+              <span>Total de ganhos</span>
+              <strong>{data.ganhos?.total ?? 0}</strong>
+            </div>
+            {(data.ganhos?.campanhas.length ?? 0) === 0 ? (
+              <p className="subtitle">Nenhum ganho nesse período.</p>
             ) : (
               <ul className="origem-campaigns">
-                {data.campanhas.map((item) => (
-                  <li key={`${item.origem}-${item.campanha}`}>
+                {data.ganhos?.campanhas.map((item) => (
+                  <li key={`ganho-${item.origem}-${item.campanha}`}>
                     <div>
                       <strong>{item.campanha}</strong>
                       <span>{item.origem}</span>
@@ -525,7 +558,7 @@ export function OrigemDashboard() {
               </ul>
             )}
           </section>
-        </>
+        </div>
       )}
     </div>
   );

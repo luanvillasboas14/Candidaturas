@@ -167,6 +167,42 @@ export async function updateTrackerLeadCampaign(
   if (error) throw error;
 }
 
+export interface TrackerGanhoRow {
+  id: string;
+  origem: string | null;
+  campanha: string | null;
+  ganho_em: string;
+}
+
+export async function listTrackerGanhos(range?: {
+  from?: string | null;
+  to?: string | null;
+}): Promise<TrackerGanhoRow[]> {
+  const rows: TrackerGanhoRow[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    let query = getSupabaseServer()
+      .from('tracker_ganhos')
+      .select('id, origem, campanha, ganho_em')
+      .order('ganho_em', { ascending: false })
+      .range(from, from + pageSize - 1);
+
+    if (range?.from) {
+      query = query.gte('ganho_em', `${range.from}T00:00:00.000-03:00`);
+    }
+    if (range?.to) {
+      query = query.lte('ganho_em', `${range.to}T23:59:59.999-03:00`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    if (!data?.length) break;
+    rows.push(...(data as TrackerGanhoRow[]));
+    if (data.length < pageSize) break;
+  }
+  return rows;
+}
+
 export async function insertTrackerGanho(input: {
   deal_id: string | null;
   contact_id: string | null;

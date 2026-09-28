@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { campaignDisplayName, isNamedCampaign } from '@/origem/campaign-label';
 import { clampOrigemRange } from '@/origem/date-range';
-import { listTrackerLeads } from '@/lib/supabase-server';
+import { listTrackerGanhos, listTrackerLeads } from '@/lib/supabase-server';
 
 function label(value: string | null | undefined, empty: string): string {
   const trimmed = value?.trim();
@@ -20,7 +20,13 @@ export async function GET(request: Request) {
       readDate(url.searchParams.get('from')),
       readDate(url.searchParams.get('to'))
     );
-    const rows = await listTrackerLeads({ from, to });
+    const [rows, ganhoRows] = await Promise.all([
+      listTrackerLeads({ from, to }),
+      listTrackerGanhos({ from, to }).catch((error) => {
+        console.error('Erro ao listar tracker_ganhos:', error);
+        return [];
+      }),
+    ]);
     const total = rows.length;
 
     const origemCount = new Map<string, number>();
@@ -52,11 +58,31 @@ export async function GET(request: Request) {
       .sort((a, b) => b.quantidade - a.quantidade)
       .slice(0, 12);
 
+    const ganhoCount = new Map<string, number>();
+    for (const row of ganhoRows) {
+      const origem = label(row.origem, 'Sem origem');
+      const campanha = campaignDisplayName(row.campanha, null);
+      const nome = isNamedCampaign(campanha) ? campanha : 'Sem campanha';
+      const key = `${origem}||${nome}`;
+      ganhoCount.set(key, (ganhoCount.get(key) || 0) + 1);
+    }
+
+    const ganhosCampanhas = Array.from(ganhoCount.entries())
+      .map(([key, quantidade]) => {
+        const [origem, campanha] = key.split('||');
+        return { origem, campanha, quantidade };
+      })
+      .sort((a, b) => b.quantidade - a.quantidade);
+
     return NextResponse.json({
       success: true,
       total,
       origens,
       campanhas,
+      ganhos: {
+        total: ganhoRows.length,
+        campanhas: ganhosCampanhas,
+      },
     });
   } catch (error) {
     console.error('Erro ao listar tracker_leads:', error);

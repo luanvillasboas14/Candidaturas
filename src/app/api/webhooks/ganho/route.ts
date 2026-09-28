@@ -43,8 +43,9 @@ export async function POST(request: Request) {
     const dealId = readText(root.dealId, data.dealId, deal.id);
     const contactId = readText(root.contactId, data.contactId, contact.id, deal.contactId);
     let telefone = readText(root.telefone, root.phone, data.telefone, data.phone, contact.telefone, contact.phone);
-    let origem = readText(root.origem, root.source, data.origem, data.source, contact.source);
-    let campanha = readText(root.campanha, root.campaign, data.campanha, data.campaign);
+    let origemFallback = readText(root.origem, root.source, data.origem, data.source, contact.source);
+    let campanhaFallback = readText(root.campanha, root.campaign, data.campanha, data.campaign);
+    let headlineFallback: string | null = null;
 
     if (!dealId && !telefone && !contactId) {
       return NextResponse.json(
@@ -53,39 +54,67 @@ export async function POST(request: Request) {
       );
     }
 
-    if (dealId) {
+    if (dealId && !telefone) {
       try {
         const detalhe = asRecord(await crmRequest<unknown>(`/api/deals/${dealId}`));
         const negocio = asRecord(detalhe?.deal) || asRecord(detalhe?.data) || detalhe;
-        campanha = campanha || campanhaDoNegocio(negocio?.customFields);
         const contato = asRecord(negocio?.contact);
-        telefone = telefone || readText(contato?.phone, contato?.telefone);
-        origem = origem || readText(contato?.source);
+        telefone = readText(contato?.phone, contato?.telefone);
+        origemFallback = origemFallback || readText(contato?.source);
+        campanhaFallback = campanhaFallback || campanhaDoNegocio(negocio?.customFields);
       } catch (error) {
         console.warn('Não foi possível ler o negócio do ganho:', error);
       }
     }
 
-    if (contactId && (!telefone || !campanha || !origem)) {
+    if (contactId && !telefone) {
       try {
         const tracking = await getContactTrackingById(contactId);
-        telefone = telefone || tracking?.telefone || null;
-        origem = origem || tracking?.origem || null;
-        campanha = campanha || tracking?.campanha || null;
+        telefone = tracking?.telefone || null;
+        origemFallback = origemFallback || tracking?.origem || null;
+        campanhaFallback = campanhaFallback || tracking?.campanha || null;
+        headlineFallback = tracking?.headline || null;
       } catch (error) {
         console.warn('Não foi possível ler o contato do ganho:', error);
       }
     }
 
     const telefoneNormalizado = telefone ? normalizePhone(telefone) : '';
-    if (!campanha && telefoneNormalizado) {
-      const lead = await getTrackerLeadByPhone(telefoneNormalizado);
-      campanha = lead?.campanha || lead?.headline || null;
-      origem = origem || lead?.origem || null;
-      telefone = telefone || lead?.telefone || null;
+    const lead = telefoneNormalizado ? await getTrackerLeadByPhone(telefoneNormalizado) : null;
+
+    let origem: string | null;
+    let campanha: string | null;
+    if (lead) {
+      origem = lead.origem;
+      campanha = lead.campanha || lead.headline;
+      telefone = telefone || lead.telefone;
+    } else {
+      if (dealId && telefone && !campanhaFallback) {
+        try {
+          const detalhe = asRecord(await crmRequest<unknown>(`/api/deals/${dealId}`));
+          const negocio = asRecord(detalhe?.deal) || asRecord(detalhe?.data) || detalhe;
+          campanhaFallback = campanhaDoNegocio(negocio?.customFields);
+          origemFallback = origemFallback || readText(asRecord(negocio?.contact)?.source);
+        } catch (error) {
+          console.warn('Não foi possível ler o negócio do ganho:', error);
+        }
+      }
+      if (contactId && (!origemFallback || !campanhaFallback)) {
+        try {
+          const tracking = await getContactTrackingById(contactId);
+          origemFallback = origemFallback || tracking?.origem || null;
+          campanhaFallback = campanhaFallback || tracking?.campanha || null;
+          headlineFallback = headlineFallback || tracking?.headline || null;
+          telefone = telefone || tracking?.telefone || null;
+        } catch (error) {
+          console.warn('Não foi possível ler o contato do ganho:', error);
+        }
+      }
+      origem = origemFallback;
+      campanha = campanhaFallback || headlineFallback;
     }
 
-    const campanhaVisivel = campaignDisplayName(campanha, null);
+    const campanhaVisivel = campaignDisplayName(campanha, lead?.headline || headlineFallback);
     const salvo = await insertTrackerGanho({
       deal_id: dealId,
       contact_id: contactId,

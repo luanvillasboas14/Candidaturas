@@ -208,6 +208,20 @@ body {
   gap: 28px;
 }
 
+.origem-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.origem-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-width: 0;
+}
+
 .origem-dashboard h2 {
   font-size: 0.95rem;
   font-weight: 800;
@@ -971,6 +985,10 @@ body {
 
   .container {
     min-height: auto;
+  }
+
+  .origem-columns {
+    grid-template-columns: 1fr;
   }
 }
 
