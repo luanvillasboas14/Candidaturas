@@ -48,6 +48,7 @@ No lote da checagem de 2h, incluir `vacancyTitle` (hoje vai só `idvacancy`) par
 ## CRM DNA
 - API: `https://integrations.bwipo.com` com Bearer `CRM_DNA_API_TOKEN`. Não usar `bwipo.com`, `api.bwipo.com` nem `frontend-front.v74knz.easypanel.host`.
 - Evento `deal_created` (automação/webhook) deve apontar para `https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/webhooks/lead-criado`.
+- Quando o negócio entra no estágio Ganho, a automação chama `POST https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/webhooks/ganho` com `dealId` (e `contactId` se o CRM mandar). Cada entrada grava uma linha em `tracker_ganhos`, mesmo que o lead já tenha ganho antes. A saída das 8h não entra nessa conta. A tabela nasce em `sql/migration_tracker_ganhos.sql` (SQL Editor).
 - Campo `source` do contato vira `origem` (ex.: Instagram, Facebook, Dina Bwipo, infojobs).
 - Campo de negócio `campanha` (slug `campanha`) recebe o rótulo lido da arte ou o nome da vaga do Pandapé.
 - Tag de negócio **Infojobs** (`cmrkrdkyh1gytpn01ae77p55q`) e nota `Candidato via Infojobs` marcam origem `infojobs`.

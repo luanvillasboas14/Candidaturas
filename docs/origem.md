@@ -9,6 +9,8 @@ A gravação na tabela não acontece na candidatura. O CRM (ou o n8n, se apontar
 
 Leads ativados pelo Scraping Pandapé (comando `/infojobs`) entram no CRM pelo WhatsApp, sem referrer de anúncio. O n8n deve chamar o mesmo webhook com `origem: infojobs` e `campanha` igual ao nome da vaga. Se o negócio já tiver a tag Infojobs ou a nota `Candidato via Infojobs — vaga: …`, o webhook também preenche sozinho. Origem de anúncio (Instagram/Facebook/Google/TikTok) não é sobrescrita; `infojobs` ganha de `whatsapp`, `Dina Bwipo` e vazio. Acentos que o Pandapé manda como `&#xE1;` são decodificados antes de gravar na tabela e no CRM.
 
+Ganho por campanha: `POST /api/webhooks/ganho` grava cada entrada no estágio Ganho em `tracker_ganhos`. O mesmo telefone pode ter várias linhas. A lista da tela ainda mostra só os leads, não os ganhos.
+
 `campanha` no dashboard não usa o ID da Meta nem o shortcode do Instagram. O webhook baixa a foto do `referrer` (Facebook `og:image` / Instagram `/media/`), lê o texto com Tesseract local (`tessdata/`) e grava um rótulo do tipo `Operador de Loja, Zona Norte`. O mesmo texto vai para o campo `campanha` do negócio no CRM DNA. Enquanto isso, a API do dashboard usa o `headline` se `campanha` ainda for um ID.
 
 ## Arquivos desta página

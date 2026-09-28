@@ -167,6 +167,23 @@ export async function updateTrackerLeadCampaign(
   if (error) throw error;
 }
 
+export async function insertTrackerGanho(input: {
+  deal_id: string | null;
+  contact_id: string | null;
+  telefone: string | null;
+  telefone_normalizado: string | null;
+  origem: string | null;
+  campanha: string | null;
+}): Promise<{ id: string; ganho_em: string }> {
+  const { data, error } = await getSupabaseServer()
+    .from('tracker_ganhos')
+    .insert(input)
+    .select('id, ganho_em')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function listTrackerLeads(range?: {
   from?: string | null;
   to?: string | null;
