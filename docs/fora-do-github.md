@@ -55,4 +55,4 @@ No lote da checagem de 2h, incluir `vacancyTitle` (hoje vai só `idvacancy`) par
 - Tag de negócio **Cruzeiro**: a Ativação Cruzeiro cria o lead no estágio Ativação (`cmstdsc2v04pjk101qb2s0a6q`) do Pipeline Principal. Quem já está nesse funil fora de Perdido, ou em outro pipeline, não é alterado. Em Perdido (`cf133884ea761486f9855d93ffa4862a9`) o mesmo negócio volta para Ativação (campos + tag), para o WhatsApp disparar.
 
 ## DNA Work (horários)
-- `https://sistema.dnawork.ai/webhook/empresa.php` — horários das vagas, cruzados pelo `codigo` da tabela `jobs`.
+- `https://sistema.dnawork.ai/webhook/empresa.php` — horários das vagas, cruzados pelo `codigo` da tabela `jobs`. A resposta pode vir com aviso PHP antes do JSON; o app lê o JSON a partir do primeiro `[` ou `{`.

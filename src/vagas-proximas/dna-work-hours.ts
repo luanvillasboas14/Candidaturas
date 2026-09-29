@@ -143,6 +143,12 @@ export function formatVagaSchedule(vaga: Record<string, unknown>): string {
   return formatDailyHours(vaga) || formatBaseHours(vaga);
 }
 
+function parseWebhookPayload(raw: string): Array<{ vagas?: Record<string, unknown>[] }> {
+  const start = raw.search(/[\[{]/);
+  if (start < 0) throw new Error('Resposta de horários sem JSON.');
+  return JSON.parse(raw.slice(start)) as Array<{ vagas?: Record<string, unknown>[] }>;
+}
+
 export async function listJobSchedulesByCodigo(): Promise<Map<string, string>> {
   const schedules = new Map<string, string>();
 
@@ -150,7 +156,7 @@ export async function listJobSchedulesByCodigo(): Promise<Map<string, string>> {
     const response = await fetch(DNA_WORK_HOURS_URL, { cache: 'no-store' });
     if (!response.ok) return schedules;
 
-    const empresas = (await response.json()) as Array<{ vagas?: Record<string, unknown>[] }>;
+    const empresas = parseWebhookPayload(await response.text());
     for (const empresa of empresas || []) {
       for (const vaga of empresa.vagas || []) {
         const codigo = String(vaga.codigo || '').trim();

@@ -3,7 +3,7 @@
 Rota da tela: `/` (`src/app/page.tsx`). `/vagas-proximas` redireciona para `/`.
 
 ## O que faz
-O atendente informa CEP, raio e tipo (`CLT` e/ou `Estágio`). O sistema geocodifica o CEP e lista vagas da tabela `jobs_enriched` dentro do raio. Vagas iguais (mesmo título, empresa, local e tipo) entram uma vez só, ficando a mais próxima. O texto para o candidato usa endereço, horário (quando existir) e salário (0 = salário a combinar; com benefícios = salário + benefícios), sem distância. Com uma vaga, termina com “Possui interesse?”. Com várias, “Possui interesse? Se sim, nos informe o número da vaga.” Se a vaga tem folga (no texto da carga ou por trabalhar 6–7 dias), isso entra no horário.
+O atendente informa CEP, raio e tipo (`CLT` e/ou `Estágio`). O sistema geocodifica o CEP e lista vagas da tabela `jobs_enriched` dentro do raio. Cada vaga mostra o horário de trabalho quando o `codigo` existe no webhook de horários. Vagas iguais (mesmo título, empresa, local, tipo e horário) entram uma vez só, ficando a mais próxima. O texto para o candidato usa endereço, horário (quando existir) e salário (0 = salário a combinar; com benefícios = salário + benefícios), sem distância. Com uma vaga, termina com “Possui interesse?”. Com várias, “Possui interesse? Se sim, nos informe o número da vaga.” Se a vaga tem folga (no texto da carga ou por trabalhar 6–7 dias), isso entra no horário.
 
 ## Arquivos desta página
 - `src/app/page.tsx` — tela.
