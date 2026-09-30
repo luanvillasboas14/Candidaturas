@@ -41,6 +41,17 @@ function emailOk(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function emailAssinatura(value: unknown): string {
+  const bruto = texto(value).replace(/-n[aã]o\s*assina$/i, '');
+  return emailOk(bruto) ? bruto : '';
+}
+
+function nomeSeNaoForEmail(nome: string, reserva: string): string {
+  if (!nome) return reserva;
+  if (emailAssinatura(nome) || nome.includes('@')) return reserva || nome;
+  return nome;
+}
+
 function pastaCandidato(nome: string): string {
   const limpo = nome.replace(/[\\/]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 50);
   return `/dna-work/${limpo || 'candidato'}/`;
@@ -185,7 +196,7 @@ async function montarSigners(idCandidato: string, idVaga: string): Promise<Signe
   const drafts: SignerDraft[] = [];
 
   const nomeCand = texto(cand.nome);
-  const emailCand = texto(cand.email);
+  const emailCand = emailAssinatura(cand.email);
   if (!nomeCand) faltando.push('Nome do candidato está em branco.');
   if (!emailOk(emailCand)) faltando.push('E-mail do candidato está em branco.');
   drafts.push({
@@ -204,7 +215,7 @@ async function montarSigners(idCandidato: string, idVaga: string): Promise<Signe
       faltando.push('Responsável legal do menor não está cadastrado.');
     } else {
       const nomeResp = nomeResponsavel(cand);
-      const emailResp = texto(cand.email_responsavel);
+      const emailResp = emailAssinatura(cand.email_responsavel);
       if (!nomeResp) faltando.push('Nome do responsável legal está em branco.');
       if (!emailOk(emailResp)) faltando.push('E-mail do responsável legal está em branco.');
       drafts.push({
@@ -237,23 +248,23 @@ async function montarSigners(idCandidato: string, idVaga: string): Promise<Signe
         authMode: 'tokenEmail',
       });
     };
-    addEmpresa(1, texto(emp.responsavel), texto(emp.email), `empresa=${emp.id_empresa}`, 'Empresa');
+    addEmpresa(1, texto(emp.responsavel), emailAssinatura(emp.email), `empresa=${emp.id_empresa}`, 'Empresa');
     if (flags) {
       addEmpresa(
         flags.financeiro,
         texto(emp.nome_financeiro),
-        texto(emp.email_financeiro),
+        emailAssinatura(emp.email_financeiro),
         `empresa-financeiro=${emp.id_empresa}`,
         'financeiro'
       );
       addEmpresa(
         flags.administrativo,
         texto(emp.nome_administrativo),
-        texto(emp.email_administrativo),
+        emailAssinatura(emp.email_administrativo),
         `empresa-administrativo=${emp.id_empresa}`,
         'administrativo'
       );
-      addEmpresa(flags.rh, texto(emp.nome_rh), texto(emp.email_rh), `empresa-rh=${emp.id_empresa}`, 'RH');
+      addEmpresa(flags.rh, texto(emp.nome_rh), emailAssinatura(emp.email_rh), `empresa-rh=${emp.id_empresa}`, 'RH');
       if (Number(flags.supervisor) === 1) {
         const [supRows] = cv.id_supervisor
           ? await pool.query<DnaRow[]>(`SELECT * FROM supervisor_estagio WHERE id = ? LIMIT 1`, [cv.id_supervisor])
@@ -262,7 +273,7 @@ async function montarSigners(idCandidato: string, idVaga: string): Promise<Signe
         addEmpresa(
           1,
           texto(sup.nome) || texto(emp.supervisor),
-          texto(sup.email),
+          emailAssinatura(sup.email),
           `supervidor=${cv.id_supervisor || sup.id || emp.id_empresa}`,
           'supervisor'
         );
@@ -293,25 +304,30 @@ async function montarSigners(idCandidato: string, idVaga: string): Promise<Signe
         authMode: 'tokenEmail',
       });
     };
+    const emailDiretor = emailAssinatura(escola.responsavel_email) || emailAssinatura(escola.email);
     addEscola(
       1,
       texto(escola.responsavel),
-      texto(escola.responsavel_email) || texto(escola.email),
+      emailDiretor,
       `escola-diretor=${escola.id_instiduicao}`,
       'diretor'
     );
-    if (escFlags) {
+    if (escFlags && Number(escola.unico_representante) !== 1) {
       addEscola(
         escFlags.representante,
-        texto(escola.representante_legal),
-        texto(escola.representante_legal_email),
+        nomeSeNaoForEmail(texto(escola.representante_legal), texto(escola.responsavel)),
+        emailAssinatura(escola.representante_legal_email) ||
+          emailAssinatura(escola.representante_legal) ||
+          emailDiretor,
         `escola-representante=${escola.id_instiduicao}`,
         'representante'
       );
+    }
+    if (escFlags) {
       addEscola(
         escFlags.supervisor,
         texto(escola.supervisor),
-        texto(escola.email),
+        emailAssinatura(escola.email),
         `escola-supervisor=${escola.id_instiduicao}`,
         'supervisor'
       );
