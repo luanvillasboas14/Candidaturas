@@ -42,7 +42,9 @@ function emailOk(value: string): boolean {
 }
 
 function emailAssinatura(value: unknown): string {
-  const bruto = texto(value).replace(/-n[aã]o\s*assina$/i, '');
+  const bruto = texto(value)
+    .replace(/\s+/g, '')
+    .replace(/-n[aã]oassina$/i, '');
   return emailOk(bruto) ? bruto : '';
 }
 
