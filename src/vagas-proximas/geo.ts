@@ -75,22 +75,34 @@ async function geocodeWithPhoton(
   const features: PhotonFeature[] = Array.isArray(data?.features) ? data.features : [];
   if (features.length === 0) return null;
 
+  const cepDigits = cep?.replace(/\D/g, '') || '';
+  if (cepDigits.length === 8) {
+    return coordsFromPhotonFeature(pickByCep(features, cepDigits) ?? undefined);
+  }
+
   const wantedCity = expectedCity ? cityKey(expectedCity) : '';
   const inCity = wantedCity
     ? features.filter((feature) => !featureCity(feature) || featureCity(feature) === wantedCity)
     : features;
-  const pool = inCity.length ? inCity : features;
+  return coordsFromPhotonFeature(inCity[0] || features[0]);
+}
 
-  const cepDigits = cep?.replace(/\D/g, '') || '';
-  if (cepDigits.length === 8) {
-    const byCep = pool.find(
-      (feature) => String(feature.properties?.postcode || '').replace(/\D/g, '') === cepDigits
-    );
-    const matched = coordsFromPhotonFeature(byCep);
-    if (matched) return matched;
-  }
+function postcodeDigits(feature: PhotonFeature): string {
+  return String(feature.properties?.postcode || '').replace(/\D/g, '');
+}
 
-  return coordsFromPhotonFeature(pool[0]);
+function pickByCep(pool: PhotonFeature[], cepDigits: string): PhotonFeature | null {
+  const exact = pool.find((feature) => postcodeDigits(feature) === cepDigits);
+  if (exact) return exact;
+
+  const withPostcode = pool.filter((feature) => postcodeDigits(feature).length >= 5);
+  if (withPostcode.length === 0) return null;
+
+  const sameFive = withPostcode.find((feature) => postcodeDigits(feature).startsWith(cepDigits.slice(0, 5)));
+  if (sameFive) return sameFive;
+
+  const sameFour = withPostcode.find((feature) => postcodeDigits(feature).startsWith(cepDigits.slice(0, 4)));
+  return sameFour || null;
 }
 
 export async function geocodeAddress(
@@ -138,23 +150,8 @@ function isGenericCityCenter(coords: Coordinates, city: string): boolean {
   return cityKey(city) === 'sao paulo' && haversineKm(coords, SAO_PAULO_CITY_CENTER) < 1.5;
 }
 
-const CITY_MATCH_KM = 30;
-
-function isNearCity(coords: Coordinates, cityCoords: Coordinates | null): boolean {
-  if (!cityCoords) return true;
-  return haversineKm(coords, cityCoords) <= CITY_MATCH_KM;
-}
-
-function isUsableOrigin(
-  coords: Coordinates | null,
-  city: string,
-  cityCoords: Coordinates | null
-): coords is Coordinates {
-  return (
-    Boolean(coords) &&
-    !isGenericCityCenter(coords as Coordinates, city) &&
-    isNearCity(coords as Coordinates, cityCoords)
-  );
+function isUsableOrigin(coords: Coordinates | null, city: string): coords is Coordinates {
+  return Boolean(coords) && !isGenericCityCenter(coords as Coordinates, city);
 }
 
 async function geocodeCepAwesomeApi(cep: string): Promise<Coordinates | null> {
@@ -222,8 +219,13 @@ export async function geocodeCep(cep: string): Promise<Coordinates | null> {
   const neighborhood = viaCep?.neighborhood || brasil?.neighborhood;
   const city = viaCep?.city || brasil?.city || '';
   const state = viaCep?.state || brasil?.state || 'SP';
-  const cityCoords = city ? await geocodeAddress(`${city}, ${state}, Brasil`, undefined, city) : null;
   let result: Coordinates | null = null;
+
+  if (isUsableOrigin(awesome, city)) {
+    result = awesome;
+  } else if (isUsableOrigin(brasil?.coords ?? null, city)) {
+    result = brasil?.coords ?? null;
+  }
 
   const photonQueries = [
     street && neighborhood ? `${street}, ${neighborhood}, ${city}, ${state}` : null,
@@ -231,22 +233,17 @@ export async function geocodeCep(cep: string): Promise<Coordinates | null> {
     city ? `${formattedCep(digits)}, ${city}, ${state}` : null,
   ].filter((query): query is string => Boolean(query));
 
-  for (const query of photonQueries) {
-    const fromPhoton = await geocodeAddress(query, digits, city);
-    if (isUsableOrigin(fromPhoton, city, cityCoords)) {
-      result = fromPhoton;
-      break;
+  if (!result) {
+    for (const query of photonQueries) {
+      const fromPhoton = await geocodeAddress(query, digits, city);
+      if (isUsableOrigin(fromPhoton, city)) {
+        result = fromPhoton;
+        break;
+      }
     }
   }
-
-  if (!result && isUsableOrigin(brasil?.coords ?? null, city, cityCoords)) {
-    result = brasil?.coords ?? null;
-  }
-  if (!result && isUsableOrigin(awesome, city, cityCoords)) {
-    result = awesome;
-  }
   if (!result && city && cityKey(city) !== 'sao paulo') {
-    result = cityCoords;
+    result = await geocodeAddress(`${city}, ${state}, Brasil`, undefined, city);
   }
 
   cepGeoCache.set(digits, result);

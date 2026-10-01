@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/ativacao-cruzeiro', label: 'Ativação Cruzeiro' },
   { href: '/banco-candidatos', label: 'Banco de Candidatos' },
   { href: '/gerador-curriculo', label: 'Gerador de currículo' },
+  { href: '/grupos-empresas', label: 'Grupos e empresas' },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

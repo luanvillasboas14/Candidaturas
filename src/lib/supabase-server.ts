@@ -5,7 +5,7 @@ import { readEnv } from './env';
 
 let supabaseServer: SupabaseClient | null = null;
 
-function getSupabaseServer(): SupabaseClient {
+export function getSupabaseServer(): SupabaseClient {
   if (supabaseServer) {
     return supabaseServer;
   }

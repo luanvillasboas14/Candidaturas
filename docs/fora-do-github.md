@@ -8,14 +8,15 @@ Este arquivo lista o que o app usa e **não vive neste repositório**.
 - Porta **3000**. Start command vazio (entrypoint da imagem). `docker-entrypoint.sh` força `HOSTNAME=0.0.0.0`.
 - Variáveis de ambiente do app ficam só no EasyPanel. No GitHub, o secret é só `EASYPANEL_DEPLOY_WEBHOOK`.
 - Ativação Cruzeiro lê o Postgres `dcz_sync` com `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS` e `DB_NAME`. Essas chaves vão no EasyPanel, nunca no GitHub.
-- Banco de Candidatos lê o MySQL `dna_work` (Lightsail/RDS) com `DNA_WORK_DB_*`. Master só no EasyPanel / `.env.local`. A lista é SELECT; escrita só no fluxo Demitir e em `assinatura_digital` / `assinatura_digital_assinantes`.
+- Banco de Candidatos lê o MySQL `dna_work` (Lightsail/RDS) com `DNA_WORK_DB_*`. Master só no EasyPanel / `.env.local`. A lista é SELECT. A escrita acontece no fluxo Demitir, em `assinatura_digital` / `assinatura_digital_assinantes`, e no cadastro de empresa (`empresa` e `assinaturas_empresa`).
 - ZapSign: `ZAPSIGN_API_TOKEN` e `ZAPSIGN_USER_TOKEN` no EasyPanel / `.env.local` (nunca no GitHub). Webhook do app: `POST https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/webhooks/zapsign`. No painel ZapSign, o webhook antigo `sistema.dnawork.ai` pode continuar; o PHP em `99estagios.com` está morto.
 - Sync de localização: `POST https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/ativacao-cruzeiro/geo-sync`. A tela também dispara se o snapshot de matriculados for novo. Um cron diário depois das 12h (Brasília) cobre o upload do dia.
 - App em produção: `https://dnaworkia-candidaturas.vkfaze.easypanel.host`
 
 ## Supabase DNA
 - Projeto `moemgftlmncdqfvzscmq`. As migrations em `sql/` são executadas no SQL Editor, não no deploy.
-- Tabelas usadas: `jobs`, `jobs_enriched`, `candidaturas`, `tracker_leads`, `alunos_cep`.
+- Tabelas usadas: `jobs`, `jobs_enriched`, `candidaturas`, `tracker_leads`, `alunos_cep`, `grupo`, `empresa`.
+- `grupo` e `empresa` nascem no SQL Editor (não há arquivo em `sql/` e o deploy não cria tabela). Grupo fica só no Supabase. Empresa nova usa o mesmo UUID em `dna_work.empresa` (`id_empresa` e `matriz`), com `tipo_empresa=1`, `status=1`, `sede=10`, `mesmoendereco=1`, `nome_confidencial=1`, `usa_agente=1`, e duas linhas em `assinaturas_empresa` (`TCE` e `Convenio`, `responsavel=1`). Se o insert no Supabase falhar, o app apaga só essa empresa e essas assinaturas no MySQL. `empresa.grupo_id` é obrigatório. O endereço da empresa (`cep`, `logradouro`, `numero`, `complemento`) fica no Supabase e nas colunas já existentes de `dna_work.empresa`. Bairro, cidade e UF do MySQL não são preenchidos por esta tela. Edição de empresa atualiza CNPJ, razão social, nome fantasia, e-mail, telefone e esses campos de endereço nos dois bancos; a troca de grupo fica só no Supabase. Excluir empresa apaga primeiro no MySQL `assinaturas_empresa` e `empresa` desse `id_empresa` (ou a linha do mesmo CNPJ) e só então o Supabase. Se o MySQL não apagar, nada sai do Supabase. Excluir grupo apaga só o Supabase e é recusado se ainda houver empresa nesse grupo.
 - `alunos_cep.vaga_enviada` (`text[]`): IDs das vagas já enviadas na Ativação Cruzeiro. Rodar `sql/migration_alunos_cep_vaga_enviada.sql` no SQL Editor.
 - Webhook do Supabase (se ainda estiver ativo) dispara o n8n para preencher `deal_candidatura_id` depois da candidatura.
 
