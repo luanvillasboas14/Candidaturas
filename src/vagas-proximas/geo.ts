@@ -65,6 +65,7 @@ async function geocodeWithPhoton(
     url.searchParams.set('limit', '5');
 
     const response = await fetch(url.toString(), {
+      cache: 'no-store',
       headers: { 'User-Agent': 'CandidaturasDNAWork/1.0' },
       signal: AbortSignal.timeout(4000),
     });
@@ -162,7 +163,10 @@ function isUsableOrigin(coords: Coordinates | null, city: string): coords is Coo
 
 async function fetchJson(url: string, timeoutMs: number): Promise<unknown | null> {
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+    const response = await fetch(url, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
     if (!response.ok) return null;
     return await response.json();
   } catch {

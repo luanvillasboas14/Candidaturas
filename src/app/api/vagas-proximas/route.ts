@@ -1,8 +1,11 @@
+import { setDefaultResultOrder } from 'node:dns';
 import { NextResponse } from 'next/server';
 import { listActiveJobsForGeo } from '@/lib/supabase';
 import { listJobSchedulesByCodigo } from '@/vagas-proximas/dna-work-hours';
 import { geocodeCep, haversineKm, normalizeCep } from '@/vagas-proximas/geo';
 import { JobContractType, NearbyJob } from '@/types/candidatura';
+
+setDefaultResultOrder('ipv4first');
 
 const CONTRACT_TYPES: JobContractType[] = ['CLT', 'Estágio'];
 
