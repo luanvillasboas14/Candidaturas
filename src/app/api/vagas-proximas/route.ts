@@ -71,18 +71,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const origin = await geocodeCep(cep);
+    const [origin, jobs, schedules] = await Promise.all([
+      geocodeCep(cep),
+      listActiveJobsForGeo(),
+      listJobSchedulesByCodigo(),
+    ]);
     if (!origin) {
       return NextResponse.json(
         { success: false, message: 'Não foi possível localizar esse CEP.' },
         { status: 400 }
       );
     }
-
-    const [jobs, schedules] = await Promise.all([
-      listActiveJobsForGeo(),
-      listJobSchedulesByCodigo(),
-    ]);
     const nearbyByKey = new Map<string, NearbyJob>();
 
     for (const job of jobs) {
@@ -124,9 +123,15 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Erro ao buscar vagas próximas:', error);
+    const timedOut = error instanceof Error && /abort|timeout/i.test(`${error.name} ${error.message}`);
     return NextResponse.json(
-      { success: false, message: 'Erro inesperado ao buscar vagas próximas.' },
-      { status: 500 }
+      {
+        success: false,
+        message: timedOut
+          ? 'A consulta demorou demais. Tente de novo.'
+          : 'Erro inesperado ao buscar vagas próximas.',
+      },
+      { status: timedOut ? 504 : 500 }
     );
   }
 }

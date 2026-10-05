@@ -1,4 +1,7 @@
 const DNA_WORK_HOURS_URL = 'https://sistema.dnawork.ai/webhook/empresa.php';
+const HOURS_CACHE_MS = 5 * 60 * 1000;
+
+let hoursCache: { at: number; schedules: Map<string, string> } | null = null;
 
 const DAYS = [
   { label: 'Segunda', entrada: ['segunda_entrada'], saida: ['segunda_saida'] },
@@ -150,11 +153,18 @@ function parseWebhookPayload(raw: string): Array<{ vagas?: Record<string, unknow
 }
 
 export async function listJobSchedulesByCodigo(): Promise<Map<string, string>> {
+  if (hoursCache && Date.now() - hoursCache.at < HOURS_CACHE_MS) {
+    return hoursCache.schedules;
+  }
+
   const schedules = new Map<string, string>();
 
   try {
-    const response = await fetch(DNA_WORK_HOURS_URL, { cache: 'no-store' });
-    if (!response.ok) return schedules;
+    const response = await fetch(DNA_WORK_HOURS_URL, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!response.ok) return hoursCache?.schedules || schedules;
 
     const empresas = parseWebhookPayload(await response.text());
     for (const empresa of empresas || []) {
@@ -165,8 +175,10 @@ export async function listJobSchedulesByCodigo(): Promise<Map<string, string>> {
         if (schedule) schedules.set(codigo, schedule);
       }
     }
+    hoursCache = { at: Date.now(), schedules };
   } catch (error) {
     console.error('Erro ao buscar horários no DNA Work:', error);
+    return hoursCache?.schedules || schedules;
   }
 
   return schedules;

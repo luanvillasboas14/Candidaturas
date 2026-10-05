@@ -100,11 +100,13 @@ function extractCepDigits(value: string): string {
 }
 
 export async function listActiveJobsForGeo(): Promise<JobGeo[]> {
+  const signal = AbortSignal.timeout(8000);
   const { data, error } = await getSupabase()
     .from('jobs_enriched')
     .select('id, source_job_id, title, company_name, location, city, state, contract_type, salary_min, salary_max, salary_range, benefits, latitude, longitude')
     .not('latitude', 'is', null)
-    .not('longitude', 'is', null);
+    .not('longitude', 'is', null)
+    .abortSignal(signal);
 
   if (error) {
     throw new Error(`Erro ao buscar vagas: ${error.message}`);
@@ -112,7 +114,8 @@ export async function listActiveJobsForGeo(): Promise<JobGeo[]> {
 
   const { data: jobCodes, error: codesError } = await getSupabase()
     .from('jobs')
-    .select('id, codigo');
+    .select('id, codigo')
+    .abortSignal(signal);
 
   if (codesError) {
     throw new Error(`Erro ao buscar códigos das vagas: ${codesError.message}`);
