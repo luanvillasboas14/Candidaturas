@@ -2,7 +2,7 @@ import { setDefaultResultOrder } from 'node:dns';
 import { NextResponse } from 'next/server';
 import { listActiveJobsForGeo } from '@/lib/supabase';
 import { listJobSchedulesByCodigo } from '@/vagas-proximas/dna-work-hours';
-import { geocodeCep, haversineKm, normalizeCep } from '@/vagas-proximas/geo';
+import { geocodeCep, haversineKm, normalizeCep, type Coordinates } from '@/vagas-proximas/geo';
 import { JobContractType, NearbyJob } from '@/types/candidatura';
 
 setDefaultResultOrder('ipv4first');
@@ -46,6 +46,15 @@ function dedupeKey(job: NearbyJob): string {
     .join('|');
 }
 
+function coordenadasInformadas(latRaw: unknown, lngRaw: unknown): Coordinates | null {
+  const lat = Number(latRaw);
+  const lng = Number(lngRaw);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  if (lat === 0 && lng === 0) return null;
+  return { lat, lng };
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -74,8 +83,9 @@ export async function POST(request: Request) {
       );
     }
 
+    const informado = coordenadasInformadas(body.lat, body.lng);
     const [origin, jobs, schedules] = await Promise.all([
-      geocodeCep(cep),
+      informado ? Promise.resolve(informado) : geocodeCep(cep),
       listActiveJobsForGeo(),
       listJobSchedulesByCodigo(),
     ]);

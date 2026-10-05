@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { JobContractType, NearbyJob } from '@/types/candidatura';
+import { geocodeCep } from '@/vagas-proximas/geo';
 
 const RADIUS_OPTIONS = [5, 10, 15, 20, 30, 50];
 const CONTRACT_OPTIONS: JobContractType[] = ['CLT', 'Estágio'];
@@ -113,10 +114,16 @@ export function VagasProximasForm() {
     setCopied(false);
 
     try {
+      const ponto = await geocodeCep(cep);
+      if (!ponto) {
+        setErrorMessage('Não foi possível localizar esse CEP.');
+        return;
+      }
+
       const response = await fetch('/api/vagas-proximas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cep, raioKm, tipos }),
+        body: JSON.stringify({ cep, raioKm, tipos, lat: ponto.lat, lng: ponto.lng }),
       });
 
       const result = await response.json();
