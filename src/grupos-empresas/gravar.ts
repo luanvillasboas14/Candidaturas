@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { PoolConnection, ResultSetHeader } from 'mysql2/promise';
 import { getDnaWorkPool, withDnaWorkTransaction, type DnaRow } from '@/lib/dna-work-db';
+import { readEnv } from '@/lib/env';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import {
   digitosCnpj,
@@ -45,6 +46,28 @@ function camposSupabaseEndereco(endereco: EnderecoEmpresa) {
   };
 }
 
+async function coordenadasDoCep(cep: string): Promise<{ latitude: number; longitude: number }> {
+  const key = readEnv('GOOGLE_MAPS_API_KEY');
+  if (!key) throw new Error('A chave do mapa não está configurada.');
+  const endereco = `${cep.slice(0, 5)}-${cep.slice(5)}`;
+  const url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
+  url.searchParams.set('address', endereco);
+  url.searchParams.set('region', 'br');
+  url.searchParams.set('language', 'pt-BR');
+  url.searchParams.set('key', key);
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Não foi possível localizar o CEP da empresa.');
+  const data = (await response.json()) as {
+    status?: string;
+    results?: Array<{ geometry?: { location?: { lat?: number; lng?: number } } }>;
+  };
+  const local = data.results?.[0]?.geometry?.location;
+  if (data.status !== 'OK' || typeof local?.lat !== 'number' || typeof local.lng !== 'number') {
+    throw new Error('Não foi possível localizar o CEP da empresa.');
+  }
+  return { latitude: local.lat, longitude: local.lng };
+}
+
 async function cnpjNoLegado(cnpj: string, ignorarId?: string): Promise<boolean> {
   const pool = getDnaWorkPool();
   const [rows] = await pool.query<DnaRow[]>(
@@ -78,6 +101,9 @@ async function exigirCnpjLivre(cnpj: string, ignorarId?: string): Promise<void> 
 }
 
 function mensagemSupabase(message: string): string {
+  if (/latitude|longitude/i.test(message) && /schema cache|PGRST204/i.test(message)) {
+    return 'Faltam latitude e longitude na tabela empresa. Rode o SQL no SQL Editor.';
+  }
   if (/column/i.test(message) && /schema cache|PGRST204/i.test(message)) {
     return 'Faltam as colunas de endereço na tabela empresa. Rode o SQL no SQL Editor.';
   }
@@ -227,6 +253,7 @@ export async function criarEmpresa(input: EmpresaInput): Promise<Empresa> {
   await exigirGrupo(dados.grupoId);
   await exigirCnpjLivre(dados.cnpj);
 
+  const ponto = await coordenadasDoCep(dados.endereco.cep);
   const id = randomUUID();
   const pool = getDnaWorkPool();
   await pool.query<ResultSetHeader>(
@@ -274,6 +301,8 @@ export async function criarEmpresa(input: EmpresaInput): Promise<Empresa> {
     email: dados.contato.email,
     telefone: dados.contato.telefone,
     ...camposSupabaseEndereco(dados.endereco),
+    latitude: ponto.latitude,
+    longitude: ponto.longitude,
   });
   if (error) {
     await apagarEmpresaLegada(id, dados.cnpj);

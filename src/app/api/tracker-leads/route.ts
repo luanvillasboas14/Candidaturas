@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
+import { listTrackerGanhos, listTrackerLeads, type TrackerLeadRow } from '@/lib/supabase-server';
 import { campaignDisplayName, isNamedCampaign } from '@/origem/campaign-label';
+import { listEntradasCrm, type EntradaCrm } from '@/origem/crm-entradas';
 import { clampOrigemRange } from '@/origem/date-range';
-import { listTrackerGanhos, listTrackerLeads } from '@/lib/supabase-server';
+import { mergeLeadTracking } from '@/origem/lead-origin';
+
+export const maxDuration = 3600;
 
 function label(value: string | null | undefined, empty: string): string {
   const trimmed = value?.trim();
@@ -13,6 +17,36 @@ function readDate(value: string | null): string | null {
   return value;
 }
 
+function juntarEntradas(entradas: EntradaCrm[], rows: TrackerLeadRow[]) {
+  const porTelefone = new Map(rows.map((row) => [row.telefone_normalizado, row]));
+  const contas: Array<{ origem: string | null; campanha: string | null; headline: string | null }> =
+    [];
+
+  for (const entrada of entradas) {
+    const lead = entrada.telefoneNormalizado
+      ? porTelefone.get(entrada.telefoneNormalizado)
+      : undefined;
+    const junto = lead
+      ? mergeLeadTracking(entrada, {
+          origem: lead.origem,
+          campanha: lead.campanha,
+          headline: lead.headline,
+          ctwa_clid: null,
+          fbclid: null,
+          gclid: null,
+          referrer: lead.referrer,
+        })
+      : entrada;
+    contas.push({
+      origem: junto.origem,
+      campanha: junto.campanha,
+      headline: junto.headline || lead?.headline || null,
+    });
+  }
+
+  return contas;
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -20,25 +54,27 @@ export async function GET(request: Request) {
       readDate(url.searchParams.get('from')),
       readDate(url.searchParams.get('to'))
     );
-    const [rows, ganhoRows] = await Promise.all([
+    const [entradas, rows, ganhoRows] = await Promise.all([
+      listEntradasCrm({ from, to }),
       listTrackerLeads({ from, to }),
       listTrackerGanhos({ from, to }).catch((error) => {
         console.error('Erro ao listar tracker_ganhos:', error);
         return [];
       }),
     ]);
-    const total = rows.length;
+    const contas = juntarEntradas(entradas, rows);
+    const total = contas.length;
 
     const origemCount = new Map<string, number>();
     const campanhaCount = new Map<string, number>();
 
-    for (const row of rows) {
+    for (const row of contas) {
       const origem = label(row.origem, 'Sem origem');
       origemCount.set(origem, (origemCount.get(origem) || 0) + 1);
 
       const campanha = campaignDisplayName(row.campanha, row.headline);
-      if (!isNamedCampaign(campanha)) continue;
-      const campanhaKey = `${origem}||${campanha}`;
+      const nome = isNamedCampaign(campanha) ? campanha : 'Sem campanha';
+      const campanhaKey = `${origem}||${nome}`;
       campanhaCount.set(campanhaKey, (campanhaCount.get(campanhaKey) || 0) + 1);
     }
 

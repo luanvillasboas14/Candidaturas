@@ -40,10 +40,21 @@ function formatSalaryLabel(job: {
   })}`;
 }
 
-function dedupeKey(job: NearbyJob): string {
-  return [job.title, job.company, job.location, job.contractType, job.schedule]
-    .map((part) => part.trim().toLowerCase().replace(/\s+/g, ' '))
+function textoChave(valor: string): string {
+  return valor.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function chaveVaga(job: NearbyJob): string {
+  return [job.title, job.company, job.location, job.contractType, job.salaryLabel, job.hasBenefits ? '1' : '0']
+    .map(textoChave)
     .join('|');
+}
+
+function incluirHorario(horarios: string[], horario: string): string[] {
+  const texto = horario.trim();
+  if (!texto) return horarios;
+  if (horarios.some((item) => textoChave(item) === textoChave(texto))) return horarios;
+  return [...horarios, texto].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
 
 function coordenadasInformadas(latRaw: unknown, lngRaw: unknown): Coordinates | null {
@@ -107,6 +118,7 @@ export async function POST(request: Request) {
       });
       if (distanceKm > raioKm) continue;
 
+      const horario = job.codigo ? schedules.get(job.codigo) || '' : '';
       const candidate: NearbyJob = {
         id: job.id,
         title: job.title,
@@ -115,13 +127,21 @@ export async function POST(request: Request) {
         contractType,
         salaryLabel: formatSalaryLabel(job),
         hasBenefits: Boolean(job.benefits),
-        schedule: job.codigo ? schedules.get(job.codigo) || '' : '',
+        schedule: horario,
+        schedules: horario ? [horario] : [],
         distanceKm: Number(distanceKm.toFixed(2)),
       };
-      const key = dedupeKey(candidate);
+      const key = chaveVaga(candidate);
       const current = nearbyByKey.get(key);
-      if (!current || candidate.distanceKm < current.distanceKm) {
+      if (!current) {
         nearbyByKey.set(key, candidate);
+      } else if (candidate.distanceKm < current.distanceKm) {
+        candidate.schedules = incluirHorario(current.schedules, horario);
+        candidate.schedule = candidate.schedules[0] || '';
+        nearbyByKey.set(key, candidate);
+      } else {
+        current.schedules = incluirHorario(current.schedules, horario);
+        current.schedule = current.schedules[0] || '';
       }
     }
 

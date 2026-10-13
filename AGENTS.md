@@ -7,13 +7,13 @@ Quando criar ou alterar rota, tabela, variável de ambiente ou regra de negócio
 
 ## Páginas
 - [Vagas próximas](docs/vagas-proximas.md) — `/`
-- [Candidaturas](docs/candidaturas.md) — `/candidaturas`
 - [Só contrato](docs/so-contrato.md) — `/so-contrato`
 - [Origem](docs/origem.md) — `/origem`
 - [Ativação Cruzeiro](docs/ativacao-cruzeiro.md) — `/ativacao-cruzeiro`
 - [Banco de Candidatos](docs/banco-candidatos.md) — `/banco-candidatos`
 - [Gerador de currículo](docs/gerador-curriculo.md) — `/gerador-curriculo`
 - [Grupos e empresas](docs/grupos-empresas.md) — `/grupos-empresas`
+- [Consultar vagas](docs/consultar-vagas.md) — `/consultar-vagas`
 - [Fora do GitHub](docs/fora-do-github.md) — n8n, EasyPanel, CRM, Supabase
 
 ## Stack
@@ -22,7 +22,7 @@ Quando criar ou alterar rota, tabela, variável de ambiente ou regra de negócio
 - Client Components só para formulário/dashboard (`'use client'`).
 - Supabase: anon key no frontend, service role key só no backend.
 - Telefone sempre normalizado para E.164 (`55DDNNNNNNNN`).
-- A aba lateral navega entre Vagas próximas, Candidaturas, Só contrato, Origem, Ativação Cruzeiro, Banco de Candidatos, Gerador de currículo e Grupos e empresas. A home abre em Vagas próximas.
+- A aba lateral navega entre Vagas próximas, Só contrato, Origem, Ativação Cruzeiro, Banco de Candidatos, Gerador de currículo, Grupos e empresas e Consultar vagas. A home abre em Vagas próximas.
 
 ## Variáveis de ambiente obrigatórias
 - `NEXT_PUBLIC_SUPABASE_URL`
@@ -37,8 +37,9 @@ Quando criar ou alterar rota, tabela, variável de ambiente ou regra de negócio
 - `ZAPSIGN_API_TOKEN`, `ZAPSIGN_API_URL` — envelope de assinatura. Só no `.env` / EasyPanel.
 - `ZAPSIGN_USER_TOKEN` (opcional) — assinatura automática da DNA; vazio = envio das outras partes segue
 - `ZAPSIGN_AGENTE_ID` (opcional, padrão `127`)
+- `GOOGLE_MAPS_API_KEY` — geocodifica o CEP da empresa nova. Só no `.env` / EasyPanel.
 
 ## Compartilhado
 - `src/components/` — shell, tema.
 - `src/lib/` — env, phone, supabase, CRM DNA.
-- `src/types/candidatura.ts` — tipos das vagas/candidatura.
+- `src/types/candidatura.ts` — tipos das vagas.

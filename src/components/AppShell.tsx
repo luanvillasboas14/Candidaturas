@@ -7,13 +7,13 @@ import { ThemeToggle } from './ThemeToggle';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Vagas próximas' },
-  { href: '/candidaturas', label: 'Candidaturas' },
   { href: '/so-contrato', label: 'Só contrato' },
   { href: '/origem', label: 'Origem' },
   { href: '/ativacao-cruzeiro', label: 'Ativação Cruzeiro' },
   { href: '/banco-candidatos', label: 'Banco de Candidatos' },
   { href: '/gerador-curriculo', label: 'Gerador de currículo' },
-  { href: '/grupos-empresas', label: 'Grupos e empresas' },
+  { href: '/grupos-empresas', label: 'Grupos, Empresas e Vagas' },
+  { href: '/consultar-vagas', label: 'Consultar vagas' },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -47,6 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={process.env.NODE_ENV === 'production'}
                 className={`sidebar-link${isActive ? ' active' : ''}`}
               >
                 {item.label}

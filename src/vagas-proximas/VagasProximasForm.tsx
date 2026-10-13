@@ -18,6 +18,11 @@ function formatDistance(distanceKm: number): string {
   return `${distanceKm.toFixed(1).replace('.', ',')} km`;
 }
 
+function horariosDaVaga(job: NearbyJob): string[] {
+  if (job.schedules?.length) return job.schedules;
+  return job.schedule ? [job.schedule] : [];
+}
+
 function buildCandidateText(jobs: NearbyJob[]): string {
   if (jobs.length === 0) return '';
 
@@ -36,8 +41,11 @@ function buildCandidateText(jobs: NearbyJob[]): string {
       `${index + 1}. ${job.title}`,
       `📍 ${job.location}`,
     ];
-    if (job.schedule) {
-      parts.push(`🕒 ${job.schedule}`);
+    const horarios = horariosDaVaga(job);
+    if (horarios.length === 1) {
+      parts.push(`🕒 ${horarios[0]}`);
+    } else if (horarios.length > 1) {
+      parts.push(['🕒 Horários:', ...horarios.map((horario) => `• ${horario}`)].join('\n'));
     }
     parts.push(`💰 ${salary}`);
     return parts.join('\n');
@@ -266,6 +274,7 @@ export function VagasProximasForm() {
 
           {jobs.map((job) => {
             const selected = selectedIds.includes(job.id);
+            const horarios = horariosDaVaga(job);
             return (
               <button
                 key={job.id}
@@ -281,8 +290,14 @@ export function VagasProximasForm() {
                   <span className="nearby-meta">
                     {job.contractType} • {job.company} • {job.location}
                   </span>
-                  {job.schedule ? (
-                    <span className="nearby-schedule">{job.schedule}</span>
+                  {horarios.length > 0 ? (
+                    <span className="nearby-schedules">
+                      {horarios.map((horario) => (
+                        <span key={horario} className="nearby-schedule">
+                          {horario}
+                        </span>
+                      ))}
+                    </span>
                   ) : null}
                 </span>
                 <span className="nearby-distance">{formatDistance(job.distanceKm)}</span>

@@ -12,6 +12,10 @@ const tesseractTrace = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   devIndicators: false,
+  onDemandEntries: {
+    maxInactiveAge: 15 * 60 * 1000,
+    pagesBufferLength: 12,
+  },
   output: 'standalone',
   serverExternalPackages: ['tesseract.js', 'tesseract.js-core', 'sharp', 'pg'],
   outputFileTracingIncludes: {

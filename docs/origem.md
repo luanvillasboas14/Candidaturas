@@ -3,9 +3,9 @@
 Rota da tela: `/origem`.
 
 ## O que faz
-Dashboard da origem dos leads na tabela `tracker_leads`: total, pizza por canal e campanhas. Lê todas as rows do período (página de 1000 em 1000; o Supabase corta em 1000 se for um `select` só). Filtro por período (7 dias ao abrir, no máximo 3 meses) e datas `dd/mm/aaaa` no horário de Brasília, digitadas ou escolhidas no calendário. O percentual aparece no tooltip ao passar o mouse na fatia. A lista de campanhas omite “Sem campanha”; cada vaga do Infojobs e cada arte de Instagram/Facebook entra como uma campanha.
+Dashboard da origem de quem entrou no período: total, pizza por canal e campanhas. A conta são os negócios criados na fase Lead de entrada (`cmuwy4al20inhpq016r5o75gn`) do funil Candidaturas entre as datas. A lista do negócio não traz o anúncio, então o contato de cada um é lido de novo, com folga abaixo de 300 chamadas por minuto. Se o CRM pedir para esperar, a mesma leitura é tentada de novo. Quem veio de anúncio da Meta (`ad`, `fb.me`, Instagram ou `utm_source` ig/fb) entra como `meta`, mesmo que a origem do WhatsApp seja Dina Bwipo. Quem está sem campanha entra no total e na lista como “Sem campanha”. O `tracker_leads` só completa o telefone de quem já está nessa fase (por exemplo Infojobs). Filtro por período (7 dias ao abrir, no máximo 3 meses) e datas `dd/mm/aaaa` no horário de Brasília, digitadas ou escolhidas no calendário. O percentual aparece no tooltip ao passar o mouse na fatia. Cada vaga do Infojobs e cada arte de Instagram/Facebook entra como uma campanha.
 
-A gravação na tabela não acontece na candidatura. O CRM (ou o n8n, se apontar para cá) chama o webhook exclusivo na criação do lead.
+A gravação na tabela não acontece nesta tela. O CRM (ou o n8n, se apontar para cá) chama o webhook exclusivo na criação do lead.
 
 Leads ativados pelo Scraping Pandapé (comando `/infojobs`) entram no CRM pelo WhatsApp, sem referrer de anúncio. O n8n deve chamar o mesmo webhook com `origem: infojobs` e `campanha` igual ao nome da vaga. Se o negócio já tiver a tag Infojobs ou a nota `Candidato via Infojobs — vaga: …`, o webhook também preenche sozinho. Origem de anúncio (Instagram/Facebook/Google/TikTok) não é sobrescrita; `infojobs` ganha de `whatsapp`, `Dina Bwipo` e vazio. Acentos que o Pandapé manda como `&#xE1;` são decodificados antes de gravar na tabela e no CRM.
 
@@ -17,6 +17,7 @@ Ganho por campanha: `POST /api/webhooks/ganho` grava cada entrada no estágio Ga
 - `src/app/origem/page.tsx` — tela.
 - `src/origem/OrigemDashboard.tsx` — filtro, pizza, campanhas dos leads e campanhas dos ganhos.
 - `src/origem/date-range.ts` — período padrão de 7 dias e teto de 3 meses.
+- `src/origem/crm-entradas.ts` — negócios criados em Lead de entrada no período, com teto de 300 chamadas por minuto.
 - `src/origem/crm-tracking.ts` — origem, campanha, headline e clids no CRM DNA.
 - `src/origem/campaign-label.ts` — decide o nome visível da campanha (ignora ID/shortcode) e decodifica acentos HTML do Pandapé.
 - `src/origem/infojobs-vacancies.ts` — cruza `Infojobs {id}` com o nome da vaga lido no scraping.

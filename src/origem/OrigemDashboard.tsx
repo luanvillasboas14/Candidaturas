@@ -495,7 +495,11 @@ export function OrigemDashboard() {
         />
       </div>
 
-      {isLoading && <p className="subtitle">Carregando origem dos candidatos…</p>}
+      {isLoading && (
+        <p className="subtitle">
+          Carregando origem dos candidatos…
+        </p>
+      )}
       {errorMessage && <div className="message error">{errorMessage}</div>}
       {!isLoading && !errorMessage && data && (
         <div className="origem-columns">
@@ -517,7 +521,7 @@ export function OrigemDashboard() {
                 <section>
                   <h2>Campanhas</h2>
                   {data.campanhas.length === 0 ? (
-                    <p className="subtitle">Nenhuma campanha nomeada nesse período.</p>
+                    <p className="subtitle">Nenhuma campanha nesse período.</p>
                   ) : (
                     <ul className="origem-campaigns">
                       {data.campanhas.map((item) => (

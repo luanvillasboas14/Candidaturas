@@ -47,15 +47,26 @@ export function detectOrigem(input: {
   fbclid?: string | null;
   ttadId?: string | null;
   adUtmSource?: string | null;
+  adSourceType?: string | null;
+  adCtwaClid?: string | null;
 }): string | null {
-  const blob = [input.referrer, input.source, input.adUtmSource]
+  const utm = (input.adUtmSource || '').trim().toLowerCase();
+  const blob = [input.referrer, input.adUtmSource, input.adCtwaClid]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
 
-  if (blob.includes('instagram')) return 'instagram';
-  if (blob.includes('facebook') || blob.includes('fb.me') || blob.includes('fb.com') || input.fbclid) {
-    return 'facebook';
+  if (
+    input.adSourceType?.trim().toLowerCase() === 'ad' ||
+    input.adCtwaClid ||
+    input.fbclid ||
+    ['ig', 'fb', 'an', 'meta', 'instagram', 'facebook'].includes(utm) ||
+    blob.includes('instagram') ||
+    blob.includes('facebook') ||
+    blob.includes('fb.me') ||
+    blob.includes('fb.com')
+  ) {
+    return 'meta';
   }
   if (blob.includes('google') || blob.includes('gclid') || input.gclid) return 'google';
   if (blob.includes('tiktok') || input.ttadId) return 'tiktok';

@@ -9,8 +9,6 @@
   --accent-2: #6a5cff;
   --success-bg: rgba(34, 197, 94, 0.12);
   --success-text: #4ade80;
-  --duplicate-bg: rgba(255, 122, 8, 0.12);
-  --duplicate-text: #ffb26b;
   --error-bg: rgba(239, 68, 68, 0.12);
   --error-text: #f87171;
   --input-bg: rgba(255, 255, 255, 0.04);
@@ -40,8 +38,6 @@
   --accent-2: #6a5cff;
   --success-bg: rgba(34, 197, 94, 0.1);
   --success-text: #166534;
-  --duplicate-bg: rgba(255, 122, 8, 0.1);
-  --duplicate-text: #9a3412;
   --error-bg: rgba(239, 68, 68, 0.1);
   --error-text: #991b1b;
   --input-bg: rgba(13, 17, 33, 0.03);
@@ -247,6 +243,28 @@ body {
   gap: 16px 20px;
 }
 
+.ge-pagina .form.ge-vaga {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.ge-vaga .c2 { grid-column: span 2; }
+.ge-vaga .c3 { grid-column: span 3; }
+.ge-vaga .c4 { grid-column: span 4; }
+.ge-vaga .c5 { grid-column: span 5; }
+.ge-vaga .c6 { grid-column: span 6; }
+.ge-vaga .c8 { grid-column: span 8; }
+.ge-vaga .c12 { grid-column: 1 / -1; }
+
+.ge-vaga .ge-horario {
+  display: contents;
+}
+
+.ge-vaga textarea {
+  min-height: 140px;
+  flex: 1;
+  resize: vertical;
+}
+
 .ge-pagina .form .subtitle,
 .ge-pagina .form .message,
 .ge-pagina .form .ge-acoes {
@@ -272,6 +290,62 @@ body {
   color: var(--text);
   border-color: var(--accent);
   background: var(--selected-bg);
+}
+
+.ge-horario {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 20px;
+}
+
+.ge-horario-resumo {
+  grid-column: 1 / -1;
+  margin: 0;
+  text-align: left;
+}
+
+.ge-dias {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 8px 10px;
+}
+
+.ge-dia {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  align-items: center;
+}
+
+.ge-dia > span {
+  grid-column: 1 / -1;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ge-dia input {
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.ge-relogio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ge-relogio span {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.ge-relogio input {
+  min-width: 0;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 .ge-acoes {
@@ -378,10 +452,44 @@ body {
   font-size: 0.75rem;
 }
 
+.consulta-item {
+  flex-wrap: wrap;
+}
+
+.consulta-item .ge-acoes {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ge-lista .consulta-status {
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .ge-pagina .form,
+  .ge-pagina .form.ge-vaga,
+  .ge-horario,
   .ge-listas {
     grid-template-columns: 1fr;
+  }
+
+  .ge-vaga .c2,
+  .ge-vaga .c3,
+  .ge-vaga .c4,
+  .ge-vaga .c5,
+  .ge-vaga .c6,
+  .ge-vaga .c8,
+  .ge-vaga .c12,
+  .ge-vaga .ge-horario-resumo,
+  .ge-vaga .ge-dias {
+    grid-column: 1 / -1;
+  }
+
+  .ge-dias {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1389,24 +1497,6 @@ select option {
   color: var(--text-muted);
 }
 
-.selected-job {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--selected-bg);
-  border: 1px solid var(--selected-border);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.selected-job-meta {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
 .submit-button {
   padding: 15px;
   border: none;
@@ -1630,12 +1720,6 @@ select option {
   background: var(--success-bg);
   color: var(--success-text);
   border-color: rgba(34, 197, 94, 0.2);
-}
-
-.message.duplicate {
-  background: var(--duplicate-bg);
-  color: var(--duplicate-text);
-  border-color: rgba(255, 122, 8, 0.2);
 }
 
 .message.error {

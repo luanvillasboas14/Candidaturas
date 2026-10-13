@@ -6,7 +6,7 @@ export default function OrigemPage() {
       <div className="card card-dashboard card-cv">
         <h1>Origem dos candidatos</h1>
         <p className="subtitle">
-          Leads de tracker_leads e ganhos de tracker_ganhos no mesmo período: canal, campanha e quem entrou em Ganho.
+          Quem entrou em Lead de entrada no período: canal, campanha e quem entrou em Ganho.
         </p>
         <OrigemDashboard />
       </div>

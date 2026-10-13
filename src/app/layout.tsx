@@ -4,8 +4,8 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { AppShell } from '@/components/AppShell';
 
 export const metadata = {
-  title: 'Candidaturas',
-  description: 'Sistema de candidaturas a vagas',
+  title: 'DNA Work',
+  description: 'Sistema interno DNA Work',
 };
 
 export default function RootLayout({

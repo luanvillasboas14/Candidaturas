@@ -4,7 +4,7 @@ import type { ContactTracking } from './crm-tracking';
 export const INFOJOBS_TAG_ID = 'cmrkrdkyh1gytpn01ae77p55q';
 export const INFOJOBS_ORIGEM = 'infojobs';
 
-const ADS = new Set(['instagram', 'facebook', 'google', 'tiktok']);
+const ADS = new Set(['instagram', 'facebook', 'google', 'tiktok', 'meta']);
 
 const EMPTY_TRACKING: ContactTracking = {
   origem: null,
