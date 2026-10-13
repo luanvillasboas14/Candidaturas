@@ -19,6 +19,7 @@ function readDate(value: string | null): string | null {
 
 function juntarEntradas(entradas: EntradaCrm[], rows: TrackerLeadRow[]) {
   const porTelefone = new Map(rows.map((row) => [row.telefone_normalizado, row]));
+  const vistos = new Set<string>();
   const contas: Array<{ origem: string | null; campanha: string | null; headline: string | null }> =
     [];
 
@@ -41,6 +42,16 @@ function juntarEntradas(entradas: EntradaCrm[], rows: TrackerLeadRow[]) {
       origem: junto.origem,
       campanha: junto.campanha,
       headline: junto.headline || lead?.headline || null,
+    });
+    if (entrada.telefoneNormalizado) vistos.add(entrada.telefoneNormalizado);
+  }
+
+  for (const row of rows) {
+    if (vistos.has(row.telefone_normalizado)) continue;
+    contas.push({
+      origem: row.origem,
+      campanha: row.campanha,
+      headline: row.headline,
     });
   }
 

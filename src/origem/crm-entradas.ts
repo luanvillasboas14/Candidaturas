@@ -142,7 +142,7 @@ function valorCampo(fields: unknown, pattern: RegExp): string | null {
   return null;
 }
 
-function entradaDoContato(contato: CrmContatoLista): EntradaCrm {
+export function entradaDoContato(contato: CrmContatoLista): EntradaCrm {
   const referrer = texto(contato.referrer) || texto(contato.utmReferrer) || valorCampo(contato.customFields, /referrer/i);
   const headline = texto(contato.adHeadline) || texto(contato.adResolvedName);
   const utmSource = texto(contato.adUtmSource) || valorCampo(contato.customFields, /utm[_ ]?source/i);
