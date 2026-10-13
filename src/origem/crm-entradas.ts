@@ -38,7 +38,7 @@ interface CrmContatoLista {
   adSourceType?: string | null;
   ttadId?: string | null;
   ttadName?: string | null;
-  tags?: CrmTag[] | string[];
+  tags?: Array<CrmTag | string>;
   customFields?: unknown;
 }
 
