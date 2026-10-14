@@ -1,5 +1,6 @@
 import { setDefaultResultOrder } from 'node:dns';
 import { NextResponse } from 'next/server';
+import { readEnv } from '@/lib/env';
 import { listActiveJobsForGeo } from '@/lib/supabase';
 import { listJobSchedulesByCodigo } from '@/vagas-proximas/dna-work-hours';
 import { geocodeCep, haversineKm, normalizeCep, type Coordinates } from '@/vagas-proximas/geo';
@@ -57,6 +58,34 @@ function incluirHorario(horarios: string[], horario: string): string[] {
   return [...horarios, texto].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
 
+async function geocodeCepGoogle(cep: string): Promise<Coordinates | null> {
+  const key = readEnv('GOOGLE_MAPS_API_KEY');
+  if (!key) return null;
+  const endereco = `${cep.slice(0, 5)}-${cep.slice(5)}`;
+  const url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
+  url.searchParams.set('address', endereco);
+  url.searchParams.set('region', 'br');
+  url.searchParams.set('language', 'pt-BR');
+  url.searchParams.set('key', key);
+  try {
+    const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+    if (!response.ok) return null;
+    const data = (await response.json()) as {
+      status?: string;
+      results?: Array<{ geometry?: { location?: { lat?: number; lng?: number } } }>;
+    };
+    const local = data.results?.[0]?.geometry?.location;
+    if (data.status !== 'OK' || typeof local?.lat !== 'number' || typeof local.lng !== 'number') return null;
+    return { lat: local.lat, lng: local.lng };
+  } catch {
+    return null;
+  }
+}
+
+async function localizarCep(cep: string): Promise<Coordinates | null> {
+  return (await geocodeCep(cep)) ?? (await geocodeCepGoogle(cep));
+}
+
 function coordenadasInformadas(latRaw: unknown, lngRaw: unknown): Coordinates | null {
   const lat = Number(latRaw);
   const lng = Number(lngRaw);
@@ -96,7 +125,7 @@ export async function POST(request: Request) {
 
     const informado = coordenadasInformadas(body.lat, body.lng);
     const [origin, jobs, schedules] = await Promise.all([
-      informado ? Promise.resolve(informado) : geocodeCep(cep),
+      informado ? Promise.resolve(informado) : localizarCep(cep),
       listActiveJobsForGeo(),
       listJobSchedulesByCodigo(),
     ]);

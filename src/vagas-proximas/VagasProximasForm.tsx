@@ -123,15 +123,15 @@ export function VagasProximasForm() {
 
     try {
       const ponto = await geocodeCep(cep);
-      if (!ponto) {
-        setErrorMessage('Não foi possível localizar esse CEP.');
-        return;
-      }
-
       const response = await fetch('/api/vagas-proximas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cep, raioKm, tipos, lat: ponto.lat, lng: ponto.lng }),
+        body: JSON.stringify({
+          cep,
+          raioKm,
+          tipos,
+          ...(ponto ? { lat: ponto.lat, lng: ponto.lng } : {}),
+        }),
       });
 
       const result = await response.json();
