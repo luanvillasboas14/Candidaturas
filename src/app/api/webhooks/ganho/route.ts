@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { crmRequest } from '@/lib/crm-dna';
 import { normalizePhone } from '@/lib/phone';
-import { getTrackerLeadByPhone, insertTrackerGanho } from '@/lib/supabase-server';
+import { getTrackerLeadByPhone, insertTrackerGanho, salvarPassagemEnviada } from '@/lib/supabase-server';
 import { campaignDisplayName } from '@/origem/campaign-label';
-import { STAGE_GANHO_ID } from '@/origem/crm-entradas';
+import { STAGE_ENVIADA_ID, STAGE_GANHO_ID } from '@/origem/crm-entradas';
 import { getContactTrackingById } from '@/origem/crm-tracking';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -70,7 +70,8 @@ export async function POST(request: Request) {
       }
     }
 
-    if (stageId !== STAGE_GANHO_ID) {
+    const prefix = stageId === STAGE_GANHO_ID ? 'ganho' : stageId === STAGE_ENVIADA_ID ? 'enviada' : null;
+    if (!prefix) {
       return NextResponse.json({ success: true, ignored: true });
     }
 
@@ -122,17 +123,42 @@ export async function POST(request: Request) {
     }
 
     const campanhaVisivel = campaignDisplayName(campanha, lead?.headline || headlineFallback);
+    const campanhaSalva = campanhaVisivel && campanhaVisivel !== 'Sem campanha' ? campanhaVisivel : campanha;
+    const entrouEm = new Date().toISOString();
+    if (prefix === 'enviada') {
+      await salvarPassagemEnviada({
+        prefix,
+        deal_id: dealId || contactId || telefoneNormalizado,
+        contact_id: contactId,
+        telefone: telefone || null,
+        telefone_normalizado: telefoneNormalizado || null,
+        origem,
+        campanha: campanhaSalva,
+        entrou_em: entrouEm,
+      });
+      return NextResponse.json({
+        success: true,
+        prefix,
+        ganhoEm: entrouEm,
+        dealId,
+        telefone: telefoneNormalizado || null,
+        origem,
+        campanha: campanhaVisivel || campanha,
+      });
+    }
+
     const salvo = await insertTrackerGanho({
-      deal_id: `ganho:${dealId || contactId || telefoneNormalizado}:${new Date().toISOString()}`,
+      deal_id: `ganho:${dealId || contactId || telefoneNormalizado}:${entrouEm}`,
       contact_id: contactId,
       telefone: telefone || null,
       telefone_normalizado: telefoneNormalizado || null,
       origem,
-      campanha: campanhaVisivel && campanhaVisivel !== 'Sem campanha' ? campanhaVisivel : campanha,
+      campanha: campanhaSalva,
     });
 
     return NextResponse.json({
       success: true,
+      prefix,
       id: salvo.id,
       ganhoEm: salvo.ganho_em,
       dealId,
