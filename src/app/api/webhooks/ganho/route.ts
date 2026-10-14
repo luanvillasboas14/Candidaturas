@@ -125,10 +125,17 @@ export async function POST(request: Request) {
     const campanhaVisivel = campaignDisplayName(campanha, lead?.headline || headlineFallback);
     const campanhaSalva = campanhaVisivel && campanhaVisivel !== 'Sem campanha' ? campanhaVisivel : campanha;
     const entrouEm = new Date().toISOString();
+    const referencia = dealId || contactId || telefoneNormalizado;
+    if (!referencia) {
+      return NextResponse.json(
+        { success: false, message: 'Informe o dealId, o contactId ou o telefone.' },
+        { status: 400 }
+      );
+    }
     if (prefix === 'enviada') {
       await salvarPassagemEnviada({
         prefix,
-        deal_id: dealId || contactId || telefoneNormalizado,
+        deal_id: referencia,
         contact_id: contactId,
         telefone: telefone || null,
         telefone_normalizado: telefoneNormalizado || null,
@@ -148,7 +155,7 @@ export async function POST(request: Request) {
     }
 
     const salvo = await insertTrackerGanho({
-      deal_id: `ganho:${dealId || contactId || telefoneNormalizado}:${entrouEm}`,
+      deal_id: `ganho:${referencia}:${entrouEm}`,
       contact_id: contactId,
       telefone: telefone || null,
       telefone_normalizado: telefoneNormalizado || null,
