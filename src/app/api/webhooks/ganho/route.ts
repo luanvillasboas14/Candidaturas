@@ -3,6 +3,7 @@ import { crmRequest } from '@/lib/crm-dna';
 import { normalizePhone } from '@/lib/phone';
 import { getTrackerLeadByPhone, insertTrackerGanho } from '@/lib/supabase-server';
 import { campaignDisplayName } from '@/origem/campaign-label';
+import { STAGE_GANHO_ID } from '@/origem/crm-entradas';
 import { getContactTrackingById } from '@/origem/crm-tracking';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
     const contact = asRecord(root.contact) || asRecord(data.contact) || {};
 
     const dealId = readText(root.dealId, data.dealId, deal.id);
+    let stageId = readText(root.stageId, data.stageId, deal.stageId);
     const contactId = readText(root.contactId, data.contactId, contact.id, deal.contactId);
     let telefone = readText(root.telefone, root.phone, data.telefone, data.phone, contact.telefone, contact.phone);
     let origemFallback = readText(root.origem, root.source, data.origem, data.source, contact.source);
@@ -54,17 +56,22 @@ export async function POST(request: Request) {
       );
     }
 
-    if (dealId && !telefone) {
+    if (dealId && (!telefone || !stageId)) {
       try {
         const detalhe = asRecord(await crmRequest<unknown>(`/api/deals/${dealId}`));
         const negocio = asRecord(detalhe?.deal) || asRecord(detalhe?.data) || detalhe;
         const contato = asRecord(negocio?.contact);
-        telefone = readText(contato?.phone, contato?.telefone);
+        stageId = stageId || readText(negocio?.stageId);
+        telefone = telefone || readText(contato?.phone, contato?.telefone);
         origemFallback = origemFallback || readText(contato?.source);
         campanhaFallback = campanhaFallback || campanhaDoNegocio(negocio?.customFields);
       } catch (error) {
         console.warn('Não foi possível ler o negócio do ganho:', error);
       }
+    }
+
+    if (stageId !== STAGE_GANHO_ID) {
+      return NextResponse.json({ success: true, ignored: true });
     }
 
     if (contactId && !telefone) {
@@ -116,7 +123,7 @@ export async function POST(request: Request) {
 
     const campanhaVisivel = campaignDisplayName(campanha, lead?.headline || headlineFallback);
     const salvo = await insertTrackerGanho({
-      deal_id: dealId,
+      deal_id: `ganho:${dealId || contactId || telefoneNormalizado}:${new Date().toISOString()}`,
       contact_id: contactId,
       telefone: telefone || null,
       telefone_normalizado: telefoneNormalizado || null,

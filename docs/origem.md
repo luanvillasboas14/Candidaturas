@@ -9,15 +9,15 @@ A gravação na tabela não acontece nesta tela. O CRM (ou o n8n, se apontar par
 
 Leads ativados pelo Scraping Pandapé (comando `/infojobs`) entram no CRM pelo WhatsApp, sem referrer de anúncio. O n8n deve chamar o mesmo webhook com `origem: infojobs` e `campanha` igual ao nome da vaga. Se o negócio já tiver a tag Infojobs ou a nota `Candidato via Infojobs — vaga: …`, o webhook também preenche sozinho. Origem de anúncio (Instagram/Facebook/Google/TikTok) não é sobrescrita; `infojobs` ganha de `whatsapp`, `Dina Bwipo` e vazio. Acentos que o Pandapé manda como `&#xE1;` são decodificados antes de gravar na tabela e no CRM.
 
-Ganho por campanha: `POST /api/webhooks/ganho` grava cada entrada no estágio Ganho em `tracker_ganhos`. O mesmo telefone pode ter várias linhas. Origem e campanha saem de `tracker_leads` quando o telefone já existe lá; senão, do campo `campanha` do negócio e do rastreio do contato. A tela mostra, no mesmo período, a coluna Campanhas dos ganhos com o total e a quantidade por campanha e canal. Ganho sem campanha entra como “Sem campanha”.
+Ganho (`c4682cb0a16da46e88f3ad82b196e4e45`) e Candidatura enviada ao cliente (`cmq0moi0n0a09p601iwxl56uz`) contam quem passou pela fase no período, mesmo que já tenha saído dela. A data é a entrada na fase. Quem ainda não estava em `tracker_leads` é gravado lá, com `created_at` igual à criação do negócio. A passagem fica em `tracker_ganhos`: `deal_id` começa com `enviada:` ou `ganho:`, e `ganho_em` é a data da entrada. A tela lê essas linhas. Facebook e Instagram contam como Meta. Ao passar o mouse na fatia Meta, o tooltip mostra quanto dela é Instagram e quanto é Facebook. Acima das campanhas há dois gráficos de colunas: leads para candidatura enviada e candidatura enviada para ganho, por canal. `POST /api/webhooks/ganho` só grava quando o negócio está na fase Ganho do funil Candidaturas, com o prefixo `ganho:`. Sem campanha entra como “Sem campanha”.
 
 `campanha` no dashboard não usa o ID da Meta nem o shortcode do Instagram. O webhook baixa a foto do `referrer` (Facebook `og:image` / Instagram `/media/`), lê o texto com Tesseract local (`tessdata/`) e grava um rótulo do tipo `Operador de Loja, Zona Norte`. O mesmo texto vai para o campo `campanha` do negócio no CRM DNA. Enquanto isso, a API do dashboard usa o `headline` se `campanha` ainda for um ID.
 
 ## Arquivos desta página
 - `src/app/origem/page.tsx` — tela.
-- `src/origem/OrigemDashboard.tsx` — filtro, pizza, campanhas dos leads e campanhas dos ganhos.
+- `src/origem/OrigemDashboard.tsx` — filtro, pizza, candidatura enviada ao cliente e ganhos.
 - `src/origem/date-range.ts` — período padrão de 7 dias e teto de 3 meses.
-- `src/origem/crm-entradas.ts` — negócios criados em Lead de entrada no período, com teto de 300 chamadas por minuto.
+- `src/origem/crm-entradas.ts` — Lead de entrada e Ganho no período, com teto de 300 chamadas por minuto. A fase Candidatura enviada ao cliente é `cmq0moi0n0a09p601iwxl56uz`.
 - `src/origem/crm-tracking.ts` — origem, campanha, headline e clids no CRM DNA.
 - `src/origem/campaign-label.ts` — decide o nome visível da campanha (ignora ID/shortcode) e decodifica acentos HTML do Pandapé.
 - `src/origem/infojobs-vacancies.ts` — cruza `Infojobs {id}` com o nome da vaga lido no scraping.

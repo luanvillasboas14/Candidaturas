@@ -139,6 +139,7 @@ export async function listTrackerGanhos(range?: {
       .order('ganho_em', { ascending: false })
       .range(from, from + pageSize - 1);
 
+    query = query.not('deal_id', 'like', 'enviada:%');
     if (range?.from) {
       query = query.gte('ganho_em', `${range.from}T00:00:00.000-03:00`);
     }
@@ -153,6 +154,143 @@ export async function listTrackerGanhos(range?: {
     if (data.length < pageSize) break;
   }
   return rows;
+}
+
+export interface PassagemEnviadaRow {
+  id: string;
+  telefone_normalizado: string | null;
+  origem: string | null;
+  campanha: string | null;
+  entrou_em: string;
+}
+
+async function listPassagens(
+  prefix: 'enviada' | 'ganho',
+  range?: { from?: string | null; to?: string | null }
+): Promise<PassagemEnviadaRow[]> {
+  const rows: PassagemEnviadaRow[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    let query = getSupabaseServer()
+      .from('tracker_ganhos')
+      .select('id, telefone_normalizado, origem, campanha, ganho_em')
+      .like('deal_id', `${prefix}:%`)
+      .order('ganho_em', { ascending: false })
+      .range(from, from + pageSize - 1);
+
+    if (range?.from) {
+      query = query.gte('ganho_em', `${range.from}T00:00:00.000-03:00`);
+    }
+    if (range?.to) {
+      query = query.lte('ganho_em', `${range.to}T23:59:59.999-03:00`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    if (!data?.length) break;
+    rows.push(
+      ...(data as Array<{
+        id: string;
+        telefone_normalizado: string | null;
+        origem: string | null;
+        campanha: string | null;
+        ganho_em: string;
+      }>).map((row) => ({
+        id: row.id,
+        telefone_normalizado: row.telefone_normalizado,
+        origem: row.origem,
+        campanha: row.campanha,
+        entrou_em: row.ganho_em,
+      }))
+    );
+    if (data.length < pageSize) break;
+  }
+  return rows;
+}
+
+export function listPassagensEnviadas(range?: {
+  from?: string | null;
+  to?: string | null;
+}): Promise<PassagemEnviadaRow[]> {
+  return listPassagens('enviada', range);
+}
+
+export function listPassagensGanhos(range?: {
+  from?: string | null;
+  to?: string | null;
+}): Promise<PassagemEnviadaRow[]> {
+  return listPassagens('ganho', range);
+}
+
+export async function salvarPassagemEnviada(input: {
+  prefix?: 'enviada' | 'ganho';
+  deal_id: string;
+  contact_id: string | null;
+  telefone: string | null;
+  telefone_normalizado: string | null;
+  origem: string | null;
+  campanha: string | null;
+  entrou_em: string;
+}): Promise<void> {
+  const dealKey = `${input.prefix || 'enviada'}:${input.deal_id}:${input.entrou_em}`;
+  const supabase = getSupabaseServer();
+  const { data: existing, error: selectError } = await supabase
+    .from('tracker_ganhos')
+    .select('id')
+    .eq('deal_id', dealKey)
+    .limit(1)
+    .maybeSingle();
+  if (selectError) throw selectError;
+  if (existing?.id) return;
+
+  const { error } = await supabase.from('tracker_ganhos').insert({
+    deal_id: dealKey,
+    contact_id: input.contact_id,
+    telefone: input.telefone,
+    telefone_normalizado: input.telefone_normalizado,
+    origem: input.origem,
+    campanha: input.campanha,
+    ganho_em: input.entrou_em,
+  });
+  if (error) throw error;
+}
+
+export async function inserirOrigemSeAusente(input: {
+  telefone: string;
+  telefone_normalizado: string;
+  origem: string | null;
+  campanha: string | null;
+  headline: string | null;
+  ctwa_clid: string | null;
+  fbclid: string | null;
+  gclid: string | null;
+  referrer: string | null;
+  created_at: string;
+}): Promise<boolean> {
+  const supabase = getSupabaseServer();
+  const { data: existing, error: selectError } = await supabase
+    .from('tracker_leads')
+    .select('id')
+    .eq('telefone_normalizado', input.telefone_normalizado)
+    .limit(1)
+    .maybeSingle();
+  if (selectError) throw selectError;
+  if (existing?.id) return false;
+
+  const { error } = await supabase.from('tracker_leads').insert({
+    telefone: input.telefone,
+    telefone_normalizado: input.telefone_normalizado,
+    origem: input.origem,
+    campanha: input.campanha,
+    headline: input.headline,
+    ctwa_clid: input.ctwa_clid,
+    fbclid: input.fbclid,
+    gclid: input.gclid,
+    referrer: input.referrer,
+    created_at: input.created_at,
+  });
+  if (error) throw error;
+  return true;
 }
 
 export async function insertTrackerGanho(input: {
@@ -170,6 +308,23 @@ export async function insertTrackerGanho(input: {
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function listTrackerRedes(
+  phones: string[]
+): Promise<Array<{ telefone_normalizado: string; origem: string | null; referrer: string | null }>> {
+  const unique = [...new Set(phones.filter(Boolean))];
+  const rows: Array<{ telefone_normalizado: string; origem: string | null; referrer: string | null }> = [];
+  for (let index = 0; index < unique.length; index += 100) {
+    const chunk = unique.slice(index, index + 100);
+    const { data, error } = await getSupabaseServer()
+      .from('tracker_leads')
+      .select('telefone_normalizado, origem, referrer')
+      .in('telefone_normalizado', chunk);
+    if (error) throw error;
+    rows.push(...((data || []) as typeof rows));
+  }
+  return rows;
 }
 
 export async function listTrackerLeads(range?: {

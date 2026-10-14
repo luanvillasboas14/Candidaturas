@@ -22,16 +22,20 @@ interface CampanhaItem {
   quantidade: number;
 }
 
-interface GanhosData {
+interface MarcoData {
   total: number;
+  origens: OrigemItem[];
+  redes?: OrigemItem[];
   campanhas: CampanhaItem[];
 }
 
 interface DashboardData {
   total: number;
   origens: OrigemItem[];
+  redes?: OrigemItem[];
   campanhas: CampanhaItem[];
-  ganhos?: GanhosData;
+  ganhos?: MarcoData;
+  enviadas?: MarcoData;
 }
 
 interface PieSlice {
@@ -86,7 +90,25 @@ function slicePath(cx: number, cy: number, r: number, start: number, end: number
   return `M ${cx} ${cy} L ${startPoint.x} ${startPoint.y} A ${r} ${r} 0 ${large} 1 ${endPoint.x} ${endPoint.y} Z`;
 }
 
-function CanalPie({ origens }: { origens: OrigemItem[] }) {
+const REDE_COR: Record<string, string> = {
+  Instagram: '#f472b6',
+  Facebook: '#38bdf8',
+  'Não identificado': '#94a3b8',
+};
+
+function textoPercentual(valor: number): string {
+  return `${valor.toFixed(1).replace('.', ',')}%`;
+}
+
+function CanalPie({
+  origens,
+  unidade = 'leads',
+  redes,
+}: {
+  origens: OrigemItem[];
+  unidade?: string;
+  redes?: OrigemItem[];
+}) {
   const [hover, setHover] = useState<PieHover | null>(null);
   const slices = useMemo<PieSlice[]>(() => {
     let angle = 0;
@@ -117,7 +139,7 @@ function CanalPie({ origens }: { origens: OrigemItem[] }) {
           viewBox="0 0 240 240"
           className="origem-pie"
           role="img"
-          aria-label="Canais de origem"
+          aria-label={`Canais de ${unidade}`}
           onMouseLeave={() => setHover(null)}
         >
           {slices.length === 1 ? (
@@ -147,8 +169,17 @@ function CanalPie({ origens }: { origens: OrigemItem[] }) {
             <strong>{hover.item.nome}</strong>
             <span>
               <i style={{ background: hover.color }} />
-              {hover.item.quantidade} leads ({hover.item.percentual}%)
+              {hover.item.quantidade} {unidade} ({hover.item.percentual}%)
             </span>
+            {hover.item.nome === 'meta' &&
+              redes
+                ?.filter((rede) => rede.nome === 'Instagram' || rede.nome === 'Facebook' || rede.quantidade > 0)
+                .map((rede) => (
+                  <span key={rede.nome}>
+                    <i style={{ background: REDE_COR[rede.nome] || '#94a3b8' }} />
+                    {rede.nome} {textoPercentual(rede.percentual)}
+                  </span>
+                ))}
           </div>
         )}
       </div>
@@ -164,6 +195,29 @@ function CanalPie({ origens }: { origens: OrigemItem[] }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+function CampanhasLista({ titulo, itens }: { titulo: string; itens: CampanhaItem[] }) {
+  return (
+    <section className="origem-panel">
+      <h2>{titulo}</h2>
+      {itens.length === 0 ? (
+        <p className="subtitle">Nenhuma campanha nesse período.</p>
+      ) : (
+        <ul className="origem-campaigns">
+          {itens.map((item) => (
+            <li key={`${titulo}-${item.origem}-${item.campanha}`}>
+              <div>
+                <strong>{item.campanha}</strong>
+                <span>{item.origem}</span>
+              </div>
+              <em>{item.quantidade}</em>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -354,6 +408,182 @@ function OrigemDateField({
   );
 }
 
+function MarcoPainel({
+  titulo,
+  totalRotulo,
+  vazio,
+  unidade,
+  dados,
+}: {
+  titulo: string;
+  totalRotulo: string;
+  vazio: string;
+  unidade: string;
+  dados?: MarcoData;
+}) {
+  const total = dados?.total ?? 0;
+  return (
+    <section className="origem-panel">
+      <h2>{titulo}</h2>
+      <div className="origem-kpi">
+        <span>{totalRotulo}</span>
+        <strong>{total}</strong>
+      </div>
+      {total === 0 ? (
+        <p className="subtitle">{vazio}</p>
+      ) : (
+        <>
+          <section>
+            <h2>Canais</h2>
+            <CanalPie origens={dados?.origens || []} unidade={unidade} redes={dados?.redes} />
+          </section>
+        </>
+      )}
+    </section>
+  );
+}
+
+function taxaNumero(parte: number, total: number): number | null {
+  if (!total) return null;
+  return (parte / total) * 100;
+}
+
+function tetoDaEscala(valores: number[]): number {
+  const maximo = Math.max(0, ...valores);
+  if (maximo <= 5) return 5;
+  if (maximo <= 10) return 10;
+  if (maximo <= 25) return 25;
+  if (maximo <= 50) return 50;
+  if (maximo <= 100) return 100;
+  return Math.ceil(maximo / 25) * 25;
+}
+
+function GraficoColunas({
+  titulo,
+  cor,
+  linhas,
+}: {
+  titulo: string;
+  cor: string;
+  linhas: Array<{ nome: string; taxa: number | null }>;
+}) {
+  const [ativa, setAtiva] = useState<number | null>(null);
+  const largura = 640;
+  const altura = 280;
+  const esquerda = 44;
+  const direita = 12;
+  const topo = 28;
+  const base = 72;
+  const areaLargura = largura - esquerda - direita;
+  const areaAltura = altura - topo - base;
+  const teto = tetoDaEscala(linhas.map((linha) => linha.taxa || 0));
+  const faixa = linhas.length ? areaLargura / linhas.length : areaLargura;
+  const barra = Math.min(42, faixa * 0.46);
+  const marcas = [0, teto / 2, teto];
+
+  return (
+    <figure className="origem-coluna">
+      <figcaption>{titulo}</figcaption>
+      <svg viewBox={`0 0 ${largura} ${altura}`} className="origem-coluna-chart" role="img" aria-label={titulo}>
+        {marcas.map((marca) => {
+          const y = topo + areaAltura - (marca / teto) * areaAltura;
+          return (
+            <g key={marca}>
+              <line x1={esquerda} x2={largura - direita} y1={y} y2={y} className="origem-coluna-eixo" />
+              <text x={esquerda - 8} y={y + 4} textAnchor="end">
+                {textoPercentual(marca)}
+              </text>
+            </g>
+          );
+        })}
+        {linhas.map((linha, index) => {
+          const centro = esquerda + faixa * index + faixa / 2;
+          const taxa = linha.taxa || 0;
+          const alturaBarra = linha.taxa == null ? 0 : (taxa / teto) * areaAltura;
+          const y = topo + areaAltura - alturaBarra;
+          return (
+            <g key={linha.nome} onMouseEnter={() => setAtiva(index)} onMouseLeave={() => setAtiva(null)}>
+              <rect
+                x={centro - barra / 2}
+                y={y}
+                width={barra}
+                height={Math.max(alturaBarra, linha.taxa == null ? 0 : 2)}
+                rx="6"
+                fill={cor}
+                opacity={ativa == null || ativa === index ? 1 : 0.45}
+              />
+              <text x={centro} y={Math.max(y - 8, 14)} textAnchor="middle" className="origem-coluna-valor">
+                {linha.taxa == null ? '—' : textoPercentual(linha.taxa)}
+              </text>
+              <text
+                x={centro}
+                y={altura - 36}
+                textAnchor="end"
+                transform={`rotate(-32 ${centro} ${altura - 36})`}
+              >
+                {linha.nome}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </figure>
+  );
+}
+
+function ConversaoGrafico({
+  leads,
+  enviadas,
+  ganhos,
+}: {
+  leads: OrigemItem[];
+  enviadas: OrigemItem[];
+  ganhos: OrigemItem[];
+}) {
+  const linhas = useMemo(() => {
+    const nomes = new Set<string>([
+      ...leads.map((item) => item.nome),
+      ...enviadas.map((item) => item.nome),
+      ...ganhos.map((item) => item.nome),
+    ]);
+    const quantidade = (lista: OrigemItem[], nome: string) =>
+      lista.find((item) => item.nome === nome)?.quantidade || 0;
+    const itens = [...nomes]
+      .map((nome) => ({
+        nome,
+        leads: quantidade(leads, nome),
+        enviadas: quantidade(enviadas, nome),
+        ganhos: quantidade(ganhos, nome),
+      }))
+      .sort((a, b) => b.leads - a.leads || b.enviadas - a.enviadas || a.nome.localeCompare(b.nome));
+    return itens;
+  }, [leads, enviadas, ganhos]);
+
+  return (
+    <section className="origem-conversao">
+      <h2>Conversão</h2>
+      <div className="origem-conversao-graficos">
+        <GraficoColunas
+          titulo="Leads → candidatura"
+          cor="#ff7a08"
+          linhas={linhas.map((linha) => ({
+            nome: linha.nome,
+            taxa: taxaNumero(linha.enviadas, linha.leads),
+          }))}
+        />
+        <GraficoColunas
+          titulo="Candidatura → ganho"
+          cor="#6a5cff"
+          linhas={linhas.map((linha) => ({
+            nome: linha.nome,
+            taxa: taxaNumero(linha.ganhos, linha.enviadas),
+          }))}
+        />
+      </div>
+    </section>
+  );
+}
+
 const initialRange = rangeForPreset('7d');
 
 export function OrigemDashboard() {
@@ -502,6 +732,7 @@ export function OrigemDashboard() {
       )}
       {errorMessage && <div className="message error">{errorMessage}</div>}
       {!isLoading && !errorMessage && data && (
+        <>
         <div className="origem-columns">
           <div className="origem-panel">
             {data.total === 0 ? (
@@ -515,54 +746,38 @@ export function OrigemDashboard() {
 
                 <section>
                   <h2>Canais</h2>
-                  <CanalPie origens={data.origens} />
-                </section>
-
-                <section>
-                  <h2>Campanhas</h2>
-                  {data.campanhas.length === 0 ? (
-                    <p className="subtitle">Nenhuma campanha nesse período.</p>
-                  ) : (
-                    <ul className="origem-campaigns">
-                      {data.campanhas.map((item) => (
-                        <li key={`${item.origem}-${item.campanha}`}>
-                          <div>
-                            <strong>{item.campanha}</strong>
-                            <span>{item.origem}</span>
-                          </div>
-                          <em>{item.quantidade}</em>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <CanalPie origens={data.origens} redes={data.redes} />
                 </section>
               </>
             )}
           </div>
 
-          <section className="origem-panel">
-            <h2>Campanhas dos ganhos</h2>
-            <div className="origem-kpi">
-              <span>Total de ganhos</span>
-              <strong>{data.ganhos?.total ?? 0}</strong>
-            </div>
-            {(data.ganhos?.campanhas.length ?? 0) === 0 ? (
-              <p className="subtitle">Nenhum ganho nesse período.</p>
-            ) : (
-              <ul className="origem-campaigns">
-                {data.ganhos?.campanhas.map((item) => (
-                  <li key={`ganho-${item.origem}-${item.campanha}`}>
-                    <div>
-                      <strong>{item.campanha}</strong>
-                      <span>{item.origem}</span>
-                    </div>
-                    <em>{item.quantidade}</em>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          <MarcoPainel
+            titulo="Candidatura enviada ao cliente"
+            totalRotulo="Quem passou"
+            vazio="Ninguém passou por Candidatura enviada ao cliente nesse período."
+            unidade="enviadas"
+            dados={data.enviadas}
+          />
+          <MarcoPainel
+            titulo="Ganhos"
+            totalRotulo="Total de ganhos"
+            vazio="Nenhum ganho nesse período."
+            unidade="ganhos"
+            dados={data.ganhos}
+          />
         </div>
+        <ConversaoGrafico
+          leads={data.origens}
+          enviadas={data.enviadas?.origens || []}
+          ganhos={data.ganhos?.origens || []}
+        />
+        <div className="origem-columns">
+          <CampanhasLista titulo="Campanhas dos leads" itens={data.campanhas} />
+          <CampanhasLista titulo="Campanhas da candidatura" itens={data.enviadas?.campanhas || []} />
+          <CampanhasLista titulo="Campanhas dos ganhos" itens={data.ganhos?.campanhas || []} />
+        </div>
+        </>
       )}
     </div>
   );

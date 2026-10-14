@@ -21,6 +21,39 @@ export function isInfojobsText(value?: string | null): boolean {
   return blob.includes('infojobs') || blob.includes('pandape') || blob.includes('pandapé');
 }
 
+const META_ORIGENS = new Set(['meta', 'facebook', 'instagram', 'ig', 'fb']);
+
+export function redeMeta(origem?: string | null, referrer?: string | null): 'Instagram' | 'Facebook' | null {
+  const nome = (origem || '').trim().toLowerCase();
+  if (nome === 'instagram' || nome === 'ig') return 'Instagram';
+  if (nome === 'facebook' || nome === 'fb') return 'Facebook';
+  const blob = (referrer || '').toLowerCase();
+  if (blob.includes('instagram')) return 'Instagram';
+  if (blob.includes('facebook') || blob.includes('fb.me') || blob.includes('fb.com')) return 'Facebook';
+  return null;
+}
+
+export function canalDeOrigem(
+  origem?: string | null,
+  referrer?: string | null,
+  origemSalva?: string | null
+): { canal: string; rede: 'Instagram' | 'Facebook' | null } {
+  const candidatos = [origem, origemSalva].map((value) => value?.trim() || '').filter(Boolean);
+  const explicita = candidatos.find((value) => {
+    const nome = value.toLowerCase();
+    return nome === 'instagram' || nome === 'ig' || nome === 'facebook' || nome === 'fb';
+  });
+  const base = (explicita || candidatos[0] || '').trim();
+  const nome = base.toLowerCase();
+  if (META_ORIGENS.has(nome)) {
+    return { canal: 'meta', rede: redeMeta(explicita || base, referrer) };
+  }
+  if (!base && redeMeta(null, referrer)) {
+    return { canal: 'meta', rede: redeMeta(null, referrer) };
+  }
+  return { canal: base || 'Sem origem', rede: null };
+}
+
 export function canonicalOrigem(value?: string | null): string | null {
   const raw = value?.trim();
   if (!raw) return null;

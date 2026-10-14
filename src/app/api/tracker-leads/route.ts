@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
-import { listTrackerGanhos, listTrackerLeads, type TrackerLeadRow } from '@/lib/supabase-server';
+import {
+  listPassagensEnviadas,
+  listPassagensGanhos,
+  listTrackerLeads,
+  listTrackerRedes,
+  type PassagemEnviadaRow,
+  type TrackerLeadRow,
+} from '@/lib/supabase-server';
 import { campaignDisplayName, isNamedCampaign } from '@/origem/campaign-label';
 import { listEntradasCrm, type EntradaCrm } from '@/origem/crm-entradas';
 import { clampOrigemRange } from '@/origem/date-range';
-import { mergeLeadTracking } from '@/origem/lead-origin';
+import { canalDeOrigem, mergeLeadTracking } from '@/origem/lead-origin';
 
 export const maxDuration = 3600;
-
-function label(value: string | null | undefined, empty: string): string {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : empty;
-}
 
 function readDate(value: string | null): string | null {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -20,8 +22,7 @@ function readDate(value: string | null): string | null {
 function juntarEntradas(entradas: EntradaCrm[], rows: TrackerLeadRow[]) {
   const porTelefone = new Map(rows.map((row) => [row.telefone_normalizado, row]));
   const vistos = new Set<string>();
-  const contas: Array<{ origem: string | null; campanha: string | null; headline: string | null }> =
-    [];
+  const contas: ContaOrigem[] = [];
 
   for (const entrada of entradas) {
     const lead = entrada.telefoneNormalizado
@@ -42,6 +43,7 @@ function juntarEntradas(entradas: EntradaCrm[], rows: TrackerLeadRow[]) {
       origem: junto.origem,
       campanha: junto.campanha,
       headline: junto.headline || lead?.headline || null,
+      referrer: junto.referrer || lead?.referrer || null,
     });
     if (entrada.telefoneNormalizado) vistos.add(entrada.telefoneNormalizado);
   }
@@ -52,9 +54,89 @@ function juntarEntradas(entradas: EntradaCrm[], rows: TrackerLeadRow[]) {
       origem: row.origem,
       campanha: row.campanha,
       headline: row.headline,
+      referrer: row.referrer,
     });
   }
 
+  return contas;
+}
+
+interface ContaOrigem {
+  origem: string | null;
+  campanha: string | null;
+  headline: string | null;
+  referrer?: string | null;
+  origemSalva?: string | null;
+}
+
+function resumirContas(contas: ContaOrigem[]) {
+  const origemCount = new Map<string, number>();
+  const redeCount = new Map<string, number>();
+  const campanhaCount = new Map<string, number>();
+  for (const row of contas) {
+    const classe = canalDeOrigem(row.origem, row.referrer, row.origemSalva);
+    origemCount.set(classe.canal, (origemCount.get(classe.canal) || 0) + 1);
+    if (classe.canal === 'meta') {
+      const rede = classe.rede || 'Não identificado';
+      redeCount.set(rede, (redeCount.get(rede) || 0) + 1);
+    }
+    const campanha = campaignDisplayName(row.campanha, row.headline);
+    const nome = isNamedCampaign(campanha) ? campanha : 'Sem campanha';
+    const rede = classe.rede || classe.canal;
+    const key = `${rede}||${nome}`;
+    campanhaCount.set(key, (campanhaCount.get(key) || 0) + 1);
+  }
+  const total = contas.length;
+  const meta = origemCount.get('meta') || 0;
+  const ordemRede = ['Instagram', 'Facebook', 'Não identificado'];
+  return {
+    total,
+    origens: Array.from(origemCount.entries())
+      .map(([nome, quantidade]) => ({
+        nome,
+        quantidade,
+        percentual: total ? Number(((quantidade / total) * 100).toFixed(1)) : 0,
+      }))
+      .sort((a, b) => b.quantidade - a.quantidade),
+    redes: ordemRede
+      .filter((nome) => redeCount.has(nome))
+      .map((nome) => {
+        const quantidade = redeCount.get(nome) || 0;
+        return {
+          nome,
+          quantidade,
+          percentual: meta ? Number(((quantidade / meta) * 100).toFixed(1)) : 0,
+        };
+      }),
+    campanhas: Array.from(campanhaCount.entries())
+      .map(([key, quantidade]) => {
+        const [origem, campanha] = key.split('||');
+        return { origem, campanha, quantidade };
+      })
+      .sort((a, b) => b.quantidade - a.quantidade)
+      .slice(0, 12),
+  };
+}
+
+function contasDePassagens(
+  rows: PassagemEnviadaRow[],
+  redes: Map<string, { origem: string | null; referrer: string | null }>
+) {
+  const vistos = new Set<string>();
+  const contas: ContaOrigem[] = [];
+  for (const row of rows) {
+    const chave = row.telefone_normalizado || row.id;
+    if (vistos.has(chave)) continue;
+    vistos.add(chave);
+    const salvo = row.telefone_normalizado ? redes.get(row.telefone_normalizado) : undefined;
+    contas.push({
+      origem: row.origem,
+      campanha: row.campanha,
+      headline: null,
+      referrer: salvo?.referrer || null,
+      origemSalva: salvo?.origem || null,
+    });
+  }
   return contas;
 }
 
@@ -65,71 +147,25 @@ export async function GET(request: Request) {
       readDate(url.searchParams.get('from')),
       readDate(url.searchParams.get('to'))
     );
-    const [entradas, rows, ganhoRows] = await Promise.all([
+    const [entradas, rows, ganhosPassagens, enviadas] = await Promise.all([
       listEntradasCrm({ from, to }),
       listTrackerLeads({ from, to }),
-      listTrackerGanhos({ from, to }).catch((error) => {
-        console.error('Erro ao listar tracker_ganhos:', error);
-        return [];
-      }),
+      listPassagensGanhos({ from, to }),
+      listPassagensEnviadas({ from, to }),
     ]);
     const contas = juntarEntradas(entradas, rows);
-    const total = contas.length;
-
-    const origemCount = new Map<string, number>();
-    const campanhaCount = new Map<string, number>();
-
-    for (const row of contas) {
-      const origem = label(row.origem, 'Sem origem');
-      origemCount.set(origem, (origemCount.get(origem) || 0) + 1);
-
-      const campanha = campaignDisplayName(row.campanha, row.headline);
-      const nome = isNamedCampaign(campanha) ? campanha : 'Sem campanha';
-      const campanhaKey = `${origem}||${nome}`;
-      campanhaCount.set(campanhaKey, (campanhaCount.get(campanhaKey) || 0) + 1);
-    }
-
-    const origens = Array.from(origemCount.entries())
-      .map(([nome, quantidade]) => ({
-        nome,
-        quantidade,
-        percentual: total ? Number(((quantidade / total) * 100).toFixed(1)) : 0,
-      }))
-      .sort((a, b) => b.quantidade - a.quantidade);
-
-    const campanhas = Array.from(campanhaCount.entries())
-      .map(([key, quantidade]) => {
-        const [origem, campanha] = key.split('||');
-        return { origem, campanha, quantidade };
-      })
-      .sort((a, b) => b.quantidade - a.quantidade)
-      .slice(0, 12);
-
-    const ganhoCount = new Map<string, number>();
-    for (const row of ganhoRows) {
-      const origem = label(row.origem, 'Sem origem');
-      const campanha = campaignDisplayName(row.campanha, null);
-      const nome = isNamedCampaign(campanha) ? campanha : 'Sem campanha';
-      const key = `${origem}||${nome}`;
-      ganhoCount.set(key, (ganhoCount.get(key) || 0) + 1);
-    }
-
-    const ganhosCampanhas = Array.from(ganhoCount.entries())
-      .map(([key, quantidade]) => {
-        const [origem, campanha] = key.split('||');
-        return { origem, campanha, quantidade };
-      })
-      .sort((a, b) => b.quantidade - a.quantidade);
+    const leads = resumirContas(contas);
+    const telefones = [...ganhosPassagens, ...enviadas]
+      .map((row) => row.telefone_normalizado)
+      .filter((phone): phone is string => Boolean(phone));
+    const redesSalvas = await listTrackerRedes(telefones);
+    const porTelefone = new Map(redesSalvas.map((row) => [row.telefone_normalizado, row]));
 
     return NextResponse.json({
       success: true,
-      total,
-      origens,
-      campanhas,
-      ganhos: {
-        total: ganhoRows.length,
-        campanhas: ganhosCampanhas,
-      },
+      ...leads,
+      ganhos: resumirContas(contasDePassagens(ganhosPassagens, porTelefone)),
+      enviadas: resumirContas(contasDePassagens(enviadas, porTelefone)),
     });
   } catch (error) {
     console.error('Erro ao listar tracker_leads:', error);
