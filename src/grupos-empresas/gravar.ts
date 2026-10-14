@@ -4,6 +4,7 @@ import { getDnaWorkPool, withDnaWorkTransaction, type DnaRow } from '@/lib/dna-w
 import { readEnv } from '@/lib/env';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import {
+  digitosCep,
   digitosCnpj,
   exigirTexto,
   normalizarContato,
@@ -89,6 +90,128 @@ async function cnpjNoSupabase(cnpj: string, ignorarId?: string): Promise<boolean
   const { data, error } = await query;
   if (error) throw new Error(mensagemSupabase(error.message));
   return Boolean(data?.length);
+}
+
+const COLUNAS_REATIVACAO = new Set([
+  'status',
+  'cnpj',
+  'razao_social',
+  'nome_fantasia',
+  'razao_sem_acento',
+  'fantasia_sem_acento',
+  'email',
+  'telefone',
+  'cep',
+  'logradouro',
+  'numero',
+  'complemento',
+  'bairro',
+  'cidade',
+  'uf',
+  'lat',
+  'lng',
+]);
+
+type LinhaEmpresaLegada = DnaRow & {
+  id_empresa: string;
+};
+
+function semAcento(valor: string): string {
+  return valor.normalize('NFD').replace(/\p{M}/gu, '');
+}
+
+function coordenadaLegada(valor: number): string {
+  const texto = String(valor);
+  return texto.length <= 20 ? texto : valor.toFixed(6);
+}
+
+async function linhasDoCnpj(cnpj: string): Promise<LinhaEmpresaLegada[]> {
+  const pool = getDnaWorkPool();
+  const [rows] = await pool.query<DnaRow[]>(
+    `
+    SELECT id_empresa, status, cnpj, razao_social, nome_fantasia, razao_sem_acento, fantasia_sem_acento,
+           email, telefone, cep, logradouro, numero, complemento, bairro, cidade, uf, lat, lng
+    FROM empresa
+    WHERE REPLACE(REPLACE(REPLACE(REPLACE(IFNULL(cnpj, ''), '.', ''), '/', ''), '-', ''), ' ', '') = ?
+    LIMIT 3
+    `,
+    [cnpj]
+  );
+  return rows as LinhaEmpresaLegada[];
+}
+
+async function localDoCep(cep: string): Promise<{ bairro: string; cidade: string; uf: string }> {
+  const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+  if (!response.ok) throw new Error('Não foi possível localizar o CEP da empresa.');
+  const data = (await response.json()) as { erro?: boolean; bairro?: string; localidade?: string; uf?: string };
+  if (data.erro) throw new Error('Não foi possível localizar o CEP da empresa.');
+  return {
+    bairro: (data.bairro || '').slice(0, 50),
+    cidade: (data.localidade || '').slice(0, 100),
+    uf: (data.uf || '').slice(0, 5),
+  };
+}
+
+function camposDaReativacao(
+  dados: ReturnType<typeof dadosEmpresa>,
+  linha: LinhaEmpresaLegada,
+  local: { bairro: string; cidade: string; uf: string } | null,
+  ponto: { latitude: number; longitude: number }
+): Array<[string, unknown]> {
+  const campos: Array<[string, unknown]> = [
+    ['status', 1],
+    ['razao_social', dados.razaoSocial],
+    ['nome_fantasia', dados.nomeFantasia],
+    ['razao_sem_acento', semAcento(dados.razaoSocial)],
+    ['fantasia_sem_acento', semAcento(dados.nomeFantasia)],
+    ['logradouro', dados.endereco.logradouro],
+  ];
+  if (digitosCnpj(String(linha.cnpj || '')) !== dados.cnpj) campos.push(['cnpj', dados.cnpj]);
+  if (dados.contato.email) campos.push(['email', dados.contato.email]);
+  if (dados.contato.telefone) campos.push(['telefone', dados.contato.telefone]);
+  if (dados.endereco.numero) campos.push(['numero', dados.endereco.numero]);
+  if (dados.endereco.complemento) campos.push(['complemento', dados.endereco.complemento]);
+  if (local) {
+    campos.push(
+      ['cep', dados.endereco.cep],
+      ['bairro', local.bairro],
+      ['cidade', local.cidade],
+      ['uf', local.uf],
+      ['lat', coordenadaLegada(ponto.latitude)],
+      ['lng', coordenadaLegada(ponto.longitude)]
+    );
+  }
+  return campos;
+}
+
+async function aplicarCamposLegados(id: string, campos: Array<[string, unknown]>): Promise<void> {
+  for (const [coluna] of campos) {
+    if (!COLUNAS_REATIVACAO.has(coluna)) throw new Error('Não foi possível atualizar a empresa no sistema antigo.');
+  }
+  const pool = getDnaWorkPool();
+  await pool.query(
+    `UPDATE empresa SET ${campos.map(([coluna]) => `${coluna} = ?`).join(', ')} WHERE id_empresa = ?`,
+    [...campos.map(([, valor]) => valor), id]
+  );
+}
+
+async function restaurarEmpresaLegada(
+  linha: LinhaEmpresaLegada,
+  campos: Array<[string, unknown]>,
+  assinaturasCriadas: string[]
+): Promise<void> {
+  const id = String(linha.id_empresa);
+  const anteriores = campos.map(([coluna]) => linha[coluna]);
+  await aplicarCamposLegados(
+    id,
+    campos.map(([coluna], index) => [coluna, anteriores[index]])
+  );
+  if (!assinaturasCriadas.length) return;
+  const pool = getDnaWorkPool();
+  await pool.query(
+    `DELETE FROM assinaturas_empresa WHERE id_empresa = ? AND tipo IN (${assinaturasCriadas.map(() => '?').join(', ')})`,
+    [id, ...assinaturasCriadas]
+  );
 }
 
 async function exigirCnpjLivre(cnpj: string, ignorarId?: string): Promise<void> {
@@ -248,12 +371,78 @@ async function exigirGrupo(grupoId: string): Promise<void> {
   }
 }
 
+async function reativarEmpresaLegada(
+  dados: ReturnType<typeof dadosEmpresa>,
+  linha: LinhaEmpresaLegada,
+  ponto: { latitude: number; longitude: number }
+): Promise<Empresa> {
+  const id = String(linha.id_empresa);
+  const cepMudou = digitosCep(String(linha.cep || '')) !== dados.endereco.cep;
+  const local = cepMudou ? await localDoCep(dados.endereco.cep) : null;
+  const campos = camposDaReativacao(dados, linha, local, ponto);
+  await aplicarCamposLegados(id, campos);
+
+  const assinaturasCriadas: string[] = [];
+  try {
+    const pool = getDnaWorkPool();
+    const [existentes] = await pool.query<DnaRow[]>(
+      `SELECT tipo FROM assinaturas_empresa WHERE id_empresa = ?`,
+      [id]
+    );
+    const tipos = new Set(existentes.map((item) => String(item.tipo)));
+    for (const tipo of ['TCE', 'Convenio']) {
+      if (tipos.has(tipo)) continue;
+      await pool.query(
+        `INSERT INTO assinaturas_empresa (id_empresa, tipo, responsavel) VALUES (?, ?, 1)`,
+        [id, tipo]
+      );
+      assinaturasCriadas.push(tipo);
+    }
+
+    const { error } = await getSupabaseServer().from('empresa').insert({
+      id,
+      grupo_id: dados.grupoId,
+      cnpj: dados.cnpj,
+      razao_social: dados.razaoSocial,
+      nome_fantasia: dados.nomeFantasia,
+      email: dados.contato.email,
+      telefone: dados.contato.telefone,
+      ...camposSupabaseEndereco(dados.endereco),
+      latitude: ponto.latitude,
+      longitude: ponto.longitude,
+    });
+    if (error) throw new Error(mensagemSupabase(error.message));
+  } catch (error) {
+    try {
+      await restaurarEmpresaLegada(linha, campos, assinaturasCriadas);
+    } catch {
+      throw new Error('Não foi possível gravar no Supabase e a empresa antiga não voltou ao estado anterior.');
+    }
+    if (error instanceof Error) throw error;
+    throw new Error('Não foi possível gravar a empresa.');
+  }
+
+  const empresas = await listarEmpresas();
+  const criada = empresas.find((item) => item.id === id);
+  if (!criada) throw new Error('A empresa foi gravada, mas não apareceu na lista.');
+  return criada;
+}
+
 export async function criarEmpresa(input: EmpresaInput): Promise<Empresa> {
   const dados = dadosEmpresa(input);
   await exigirGrupo(dados.grupoId);
-  await exigirCnpjLivre(dados.cnpj);
+  if (await cnpjNoSupabase(dados.cnpj)) {
+    throw new Error('Esse CNPJ já está cadastrado.');
+  }
+  const linhas = await linhasDoCnpj(dados.cnpj);
+  if (linhas.length > 1) {
+    throw new Error('Esse CNPJ aparece mais de uma vez no sistema antigo. O cadastro foi interrompido.');
+  }
 
   const ponto = await coordenadasDoCep(dados.endereco.cep);
+  if (linhas.length === 1) return reativarEmpresaLegada(dados, linhas[0], ponto);
+
+  await exigirCnpjLivre(dados.cnpj);
   const id = randomUUID();
   const pool = getDnaWorkPool();
   await pool.query<ResultSetHeader>(
