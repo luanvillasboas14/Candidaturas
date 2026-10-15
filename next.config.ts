@@ -22,6 +22,15 @@ const nextConfig: NextConfig = {
     '/api/so-contrato/analisar': tesseractTrace,
     '/src/app/api/so-contrato/analisar/route': tesseractTrace,
   },
+  async redirects() {
+    return [
+      {
+        source: '/ativacao-infojobs',
+        destination: 'https://dnaworkia-disparador-infojobs.vkfaze.easypanel.host/',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

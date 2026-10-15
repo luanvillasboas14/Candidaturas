@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ThemeToggle } from './ThemeToggle';
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { href: string; label: string; document?: boolean }[] = [
   { href: '/', label: 'Vagas próximas' },
   { href: '/so-contrato', label: 'Só contrato' },
   { href: '/origem', label: 'Origem' },
   { href: '/ativacao-cruzeiro', label: 'Ativação Cruzeiro' },
+  { href: '/ativacao-infojobs', label: 'Ativação Infojobs', document: true },
   { href: '/banco-candidatos', label: 'Banco de Candidatos' },
   { href: '/gerador-curriculo', label: 'Gerador de currículo' },
   { href: '/grupos-empresas', label: 'Grupos, Empresas e Vagas' },
@@ -43,12 +44,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 ? pathname === '/'
                 : pathname.startsWith(item.href);
 
+            const className = `sidebar-link${isActive ? ' active' : ''}`;
+            if (item.document) {
+              return (
+                <a key={item.href} href={item.href} className={className}>
+                  {item.label}
+                </a>
+              );
+            }
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 prefetch={process.env.NODE_ENV === 'production'}
-                className={`sidebar-link${isActive ? ' active' : ''}`}
+                className={className}
               >
                 {item.label}
               </Link>

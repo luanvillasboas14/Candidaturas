@@ -12,6 +12,7 @@ Este arquivo lista o que o app usa e **não vive neste repositório**.
 - ZapSign: `ZAPSIGN_API_TOKEN` e `ZAPSIGN_USER_TOKEN` no EasyPanel / `.env.local` (nunca no GitHub). Webhook do app: `POST https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/webhooks/zapsign`. No painel ZapSign, o webhook antigo `sistema.dnawork.ai` pode continuar; o PHP em `99estagios.com` está morto.
 - Sync de localização: `POST https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/ativacao-cruzeiro/geo-sync`. A tela também dispara se o snapshot de matriculados for novo. Um cron diário depois das 12h (Brasília) cobre o upload do dia.
 - App em produção: `https://dnaworkia-candidaturas.vkfaze.easypanel.host`
+- Ativação Infojobs só redireciona para o painel Pandapé → Bwipo CRM: `https://dnaworkia-disparador-infojobs.vkfaze.easypanel.host/`. Esse painel é outro app no EasyPanel; usuário e senha ficam nele.
 
 ## Supabase DNA
 - Projeto `moemgftlmncdqfvzscmq`. As migrations em `sql/` são executadas no SQL Editor, não no deploy.
