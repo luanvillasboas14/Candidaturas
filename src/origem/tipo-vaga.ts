@@ -12,17 +12,22 @@ export function tipoSalvo(value: string | null | undefined): TipoVaga | null {
   return value === 'clt' || value === 'estagio' ? value : null;
 }
 
+function listasDe(value: unknown): unknown[][] {
+  if (Array.isArray(value)) return [value];
+  if (!value || typeof value !== 'object') return [];
+  return Object.values(value as Record<string, unknown>).flatMap((item) => listasDe(item));
+}
+
 export function tipoVagaDoContato(contact: unknown): TipoVaga | null {
   if (!contact || typeof contact !== 'object') return null;
   const row = contact as Record<string, unknown>;
   const listas = [
-    row.dealInboxPanelFields,
-    row.inboxLeadPanelFields,
-    row.customFields,
-    row.panelFields,
+    ...listasDe(row.dealInboxPanelFields),
+    ...listasDe(row.inboxLeadPanelFields),
+    ...listasDe(row.customFields),
+    ...listasDe(row.panelFields),
   ];
   for (const lista of listas) {
-    if (!Array.isArray(lista)) continue;
     for (const item of lista) {
       if (!item || typeof item !== 'object') continue;
       const campo = item as Record<string, unknown>;

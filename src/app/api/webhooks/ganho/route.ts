@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
 import { crmRequest } from '@/lib/crm-dna';
 import { normalizePhone } from '@/lib/phone';
-import { atualizarTipoVagaLead, getTrackerLeadByPhone, salvarPassagemEnviada } from '@/lib/supabase-server';
+import {
+  atualizarTipoVagaLead,
+  getTrackerLeadByPhone,
+  salvarPassagemEnviada,
+  upsertTrackerLead,
+} from '@/lib/supabase-server';
 import { campaignDisplayName } from '@/origem/campaign-label';
 import { STAGE_ATENDIMENTO_IA_ID, STAGE_GANHO_ID, STAGE_SELETIVO_ID } from '@/origem/crm-entradas';
-import { getContactTrackingById } from '@/origem/crm-tracking';
+import { getContactTrackingById, type ContactTrackingRecord } from '@/origem/crm-tracking';
 import type { TipoVaga } from '@/origem/tipo-vaga';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -50,6 +55,7 @@ export async function POST(request: Request) {
     let campanhaFallback = readText(root.campanha, root.campaign, data.campanha, data.campaign);
     let headlineFallback: string | null = null;
     let tipoVaga: TipoVaga | null = null;
+    let trackingSalvo: ContactTrackingRecord | null = null;
 
     if (!dealId && !telefone && !contactId) {
       return NextResponse.json(
@@ -81,6 +87,7 @@ export async function POST(request: Request) {
     if (contactId) {
       try {
         const tracking = await getContactTrackingById(contactId);
+        trackingSalvo = tracking;
         tipoVaga = tracking?.tipoVaga || null;
         telefone = telefone || tracking?.telefone || null;
         origemFallback = origemFallback || tracking?.origem || null;
@@ -129,6 +136,19 @@ export async function POST(request: Request) {
 
     const campanhaVisivel = campaignDisplayName(campanha, lead?.headline || headlineFallback);
     const campanhaSalva = campanhaVisivel && campanhaVisivel !== 'Sem campanha' ? campanhaVisivel : campanha;
+    if (telefoneNormalizado && !lead && (atendimentoIa || tipoVaga)) {
+      await upsertTrackerLead({
+        telefone: telefone || trackingSalvo?.telefone || telefoneNormalizado,
+        telefone_normalizado: telefoneNormalizado,
+        origem: trackingSalvo?.origem || origemFallback,
+        campanha: trackingSalvo?.campanha || campanhaFallback,
+        headline: trackingSalvo?.headline || headlineFallback,
+        ctwa_clid: trackingSalvo?.ctwa_clid || null,
+        fbclid: trackingSalvo?.fbclid || null,
+        gclid: trackingSalvo?.gclid || null,
+        referrer: trackingSalvo?.referrer || null,
+      });
+    }
     if (tipoVaga && telefoneNormalizado) {
       await atualizarTipoVagaLead(telefoneNormalizado, tipoVaga);
     }
