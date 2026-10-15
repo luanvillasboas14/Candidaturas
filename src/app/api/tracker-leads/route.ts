@@ -11,6 +11,7 @@ import { campaignDisplayName, isNamedCampaign } from '@/origem/campaign-label';
 import { listEntradasCrm, type EntradaCrm } from '@/origem/crm-entradas';
 import { clampOrigemRange } from '@/origem/date-range';
 import { canalDeOrigem, mergeLeadTracking } from '@/origem/lead-origin';
+import { tipoSalvo, type TipoVaga } from '@/origem/tipo-vaga';
 
 export const maxDuration = 3600;
 
@@ -44,6 +45,7 @@ function juntarEntradas(entradas: EntradaCrm[], rows: TrackerLeadRow[]) {
       campanha: junto.campanha,
       headline: junto.headline || lead?.headline || null,
       referrer: junto.referrer || lead?.referrer || null,
+      tipo: tipoSalvo(lead?.tipo_vaga),
     });
     if (entrada.telefoneNormalizado) vistos.add(entrada.telefoneNormalizado);
   }
@@ -55,6 +57,7 @@ function juntarEntradas(entradas: EntradaCrm[], rows: TrackerLeadRow[]) {
       campanha: row.campanha,
       headline: row.headline,
       referrer: row.referrer,
+      tipo: tipoSalvo(row.tipo_vaga),
     });
   }
 
@@ -67,13 +70,18 @@ interface ContaOrigem {
   headline: string | null;
   referrer?: string | null;
   origemSalva?: string | null;
+  tipo?: TipoVaga | null;
 }
 
 function resumirContas(contas: ContaOrigem[]) {
   const origemCount = new Map<string, number>();
   const redeCount = new Map<string, number>();
   const campanhaCount = new Map<string, number>();
+  let clt = 0;
+  let estagio = 0;
   for (const row of contas) {
+    if (row.tipo === 'clt') clt += 1;
+    if (row.tipo === 'estagio') estagio += 1;
     const classe = canalDeOrigem(row.origem, row.referrer, row.origemSalva);
     origemCount.set(classe.canal, (origemCount.get(classe.canal) || 0) + 1);
     if (classe.canal === 'meta') {
@@ -91,6 +99,8 @@ function resumirContas(contas: ContaOrigem[]) {
   const ordemRede = ['Instagram', 'Facebook', 'Não identificado'];
   return {
     total,
+    clt,
+    estagio,
     origens: Array.from(origemCount.entries())
       .map(([nome, quantidade]) => ({
         nome,
@@ -135,6 +145,7 @@ function contasDePassagens(
       headline: null,
       referrer: salvo?.referrer || null,
       origemSalva: salvo?.origem || null,
+      tipo: tipoSalvo(row.tipo_vaga),
     });
   }
   return contas;

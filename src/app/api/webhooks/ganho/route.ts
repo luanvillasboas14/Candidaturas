@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { crmRequest } from '@/lib/crm-dna';
 import { normalizePhone } from '@/lib/phone';
-import { getTrackerLeadByPhone, insertTrackerGanho, salvarPassagemEnviada } from '@/lib/supabase-server';
+import { atualizarTipoVagaLead, getTrackerLeadByPhone, salvarPassagemEnviada } from '@/lib/supabase-server';
 import { campaignDisplayName } from '@/origem/campaign-label';
-import { STAGE_GANHO_ID, STAGE_SELETIVO_ID } from '@/origem/crm-entradas';
+import { STAGE_ATENDIMENTO_IA_ID, STAGE_GANHO_ID, STAGE_SELETIVO_ID } from '@/origem/crm-entradas';
 import { getContactTrackingById } from '@/origem/crm-tracking';
+import type { TipoVaga } from '@/origem/tipo-vaga';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -48,6 +49,7 @@ export async function POST(request: Request) {
     let origemFallback = readText(root.origem, root.source, data.origem, data.source, contact.source);
     let campanhaFallback = readText(root.campanha, root.campaign, data.campanha, data.campaign);
     let headlineFallback: string | null = null;
+    let tipoVaga: TipoVaga | null = null;
 
     if (!dealId && !telefone && !contactId) {
       return NextResponse.json(
@@ -70,15 +72,17 @@ export async function POST(request: Request) {
       }
     }
 
-    const prefix = stageId === STAGE_GANHO_ID ? 'ganho' : stageId === STAGE_SELETIVO_ID ? 'seletivo' : null;
-    if (!prefix) {
+    const atendimentoIa = stageId === STAGE_ATENDIMENTO_IA_ID;
+    const passagem = stageId === STAGE_GANHO_ID ? 'ganho' : stageId === STAGE_SELETIVO_ID ? 'seletivo' : null;
+    if (!passagem && !atendimentoIa) {
       return NextResponse.json({ success: true, ignored: true });
     }
 
-    if (contactId && !telefone) {
+    if (contactId) {
       try {
         const tracking = await getContactTrackingById(contactId);
-        telefone = tracking?.telefone || null;
+        tipoVaga = tracking?.tipoVaga || null;
+        telefone = telefone || tracking?.telefone || null;
         origemFallback = origemFallback || tracking?.origem || null;
         campanhaFallback = campanhaFallback || tracking?.campanha || null;
         headlineFallback = tracking?.headline || null;
@@ -114,6 +118,7 @@ export async function POST(request: Request) {
           campanhaFallback = campanhaFallback || tracking?.campanha || null;
           headlineFallback = headlineFallback || tracking?.headline || null;
           telefone = telefone || tracking?.telefone || null;
+          tipoVaga = tipoVaga || tracking?.tipoVaga || null;
         } catch (error) {
           console.warn('Não foi possível ler o contato do ganho:', error);
         }
@@ -124,50 +129,43 @@ export async function POST(request: Request) {
 
     const campanhaVisivel = campaignDisplayName(campanha, lead?.headline || headlineFallback);
     const campanhaSalva = campanhaVisivel && campanhaVisivel !== 'Sem campanha' ? campanhaVisivel : campanha;
+    if (tipoVaga && telefoneNormalizado) {
+      await atualizarTipoVagaLead(telefoneNormalizado, tipoVaga);
+    }
+    if (atendimentoIa) {
+      return NextResponse.json({
+        success: true,
+        tipo: tipoVaga,
+        telefone: telefoneNormalizado || null,
+      });
+    }
+
     const entrouEm = new Date().toISOString();
     const referencia = dealId || contactId || telefoneNormalizado;
-    if (!referencia) {
+    if (!referencia || !passagem) {
       return NextResponse.json(
         { success: false, message: 'Informe o dealId, o contactId ou o telefone.' },
         { status: 400 }
       );
     }
-    if (prefix === 'seletivo') {
-      await salvarPassagemEnviada({
-        prefix,
-        deal_id: referencia,
-        contact_id: contactId,
-        telefone: telefone || null,
-        telefone_normalizado: telefoneNormalizado || null,
-        origem,
-        campanha: campanhaSalva,
-        entrou_em: entrouEm,
-      });
-      return NextResponse.json({
-        success: true,
-        prefix,
-        ganhoEm: entrouEm,
-        dealId,
-        telefone: telefoneNormalizado || null,
-        origem,
-        campanha: campanhaVisivel || campanha,
-      });
-    }
-
-    const salvo = await insertTrackerGanho({
-      deal_id: `ganho:${referencia}:${entrouEm}`,
+    const salvo = await salvarPassagemEnviada({
+      passagem,
+      deal_id: referencia,
       contact_id: contactId,
       telefone: telefone || null,
       telefone_normalizado: telefoneNormalizado || null,
       origem,
       campanha: campanhaSalva,
+      tipo_vaga: tipoVaga,
+      entrou_em: entrouEm,
     });
 
     return NextResponse.json({
       success: true,
-      prefix,
+      passagem,
       id: salvo.id,
       ganhoEm: salvo.ganho_em,
+      tipo: tipoVaga,
       dealId,
       telefone: telefoneNormalizado || null,
       origem,

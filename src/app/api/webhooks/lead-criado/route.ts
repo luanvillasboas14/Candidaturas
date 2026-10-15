@@ -9,6 +9,7 @@ import { resolveInfojobsCampaign } from '@/origem/campaign-label';
 import { isAdsOrigem, mergeLeadTracking } from '@/origem/lead-origin';
 import { normalizePhone } from '@/lib/phone';
 import {
+  atualizarTipoVagaLead,
   getTrackerLeadByPhone,
   updateTrackerLeadCampaign,
   upsertTrackerLead,
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, ignored: true, event });
     }
 
-    let crmTracking: ContactTracking & { telefone?: string } | null = null;
+    let crmTracking: (ContactTracking & { telefone?: string; tipoVaga?: 'clt' | 'estagio' | null }) | null = null;
     try {
       crmTracking = contactId
         ? await getContactTrackingById(contactId)
@@ -160,6 +161,9 @@ export async function POST(request: Request) {
       gclid: tracking.gclid,
       referrer: tracking.referrer,
     });
+    if (crmTracking?.tipoVaga) {
+      await atualizarTipoVagaLead(telefoneNormalizado, crmTracking.tipoVaga);
+    }
 
     const dealTarget = {
       telefone: telefoneRaw,

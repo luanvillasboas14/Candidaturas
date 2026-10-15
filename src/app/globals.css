@@ -770,6 +770,12 @@ body {
   font-size: 1.4rem;
 }
 
+.origem-tipo {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
 .origem-pie-block {
   display: flex;
   flex-direction: column;

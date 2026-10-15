@@ -105,6 +105,7 @@ export interface TrackerLeadRow {
   campanha: string | null;
   headline: string | null;
   referrer: string | null;
+  tipo_vaga: string | null;
   created_at: string;
 }
 
@@ -136,10 +137,10 @@ export async function listTrackerGanhos(range?: {
     let query = getSupabaseServer()
       .from('tracker_ganhos')
       .select('id, origem, campanha, ganho_em')
+      .eq('passagem', 'ganho')
       .order('ganho_em', { ascending: false })
       .range(from, from + pageSize - 1);
 
-    query = query.not('deal_id', 'like', 'enviada:%').not('deal_id', 'like', 'seletivo:%');
     if (range?.from) {
       query = query.gte('ganho_em', `${range.from}T00:00:00.000-03:00`);
     }
@@ -161,6 +162,7 @@ export interface PassagemEnviadaRow {
   telefone_normalizado: string | null;
   origem: string | null;
   campanha: string | null;
+  tipo_vaga: string | null;
   entrou_em: string;
 }
 
@@ -173,8 +175,8 @@ async function listPassagens(
   for (let from = 0; ; from += pageSize) {
     let query = getSupabaseServer()
       .from('tracker_ganhos')
-      .select('id, telefone_normalizado, origem, campanha, ganho_em')
-      .like('deal_id', `${prefix}:%`)
+      .select('id, telefone_normalizado, origem, campanha, tipo_vaga, ganho_em')
+      .eq('passagem', prefix)
       .order('ganho_em', { ascending: false })
       .range(from, from + pageSize - 1);
 
@@ -194,12 +196,14 @@ async function listPassagens(
         telefone_normalizado: string | null;
         origem: string | null;
         campanha: string | null;
+        tipo_vaga: string | null;
         ganho_em: string;
       }>).map((row) => ({
         id: row.id,
         telefone_normalizado: row.telefone_normalizado,
         origem: row.origem,
         campanha: row.campanha,
+        tipo_vaga: row.tipo_vaga,
         entrou_em: row.ganho_em,
       }))
     );
@@ -223,35 +227,56 @@ export function listPassagensGanhos(range?: {
 }
 
 export async function salvarPassagemEnviada(input: {
-  prefix?: 'enviada' | 'seletivo' | 'ganho';
+  passagem: 'seletivo' | 'ganho';
   deal_id: string;
   contact_id: string | null;
   telefone: string | null;
   telefone_normalizado: string | null;
   origem: string | null;
   campanha: string | null;
+  tipo_vaga: 'clt' | 'estagio' | null;
   entrou_em: string;
-}): Promise<void> {
-  const dealKey = `${input.prefix || 'enviada'}:${input.deal_id}:${input.entrou_em}`;
+}): Promise<{ id: string; ganho_em: string }> {
+  const dealKey = `${input.deal_id}:${input.entrou_em}`;
   const supabase = getSupabaseServer();
   const { data: existing, error: selectError } = await supabase
     .from('tracker_ganhos')
-    .select('id')
+    .select('id, ganho_em')
     .eq('deal_id', dealKey)
     .limit(1)
     .maybeSingle();
   if (selectError) throw selectError;
-  if (existing?.id) return;
+  if (existing?.id) {
+    return { id: existing.id, ganho_em: existing.ganho_em || input.entrou_em };
+  }
 
-  const { error } = await supabase.from('tracker_ganhos').insert({
-    deal_id: dealKey,
-    contact_id: input.contact_id,
-    telefone: input.telefone,
-    telefone_normalizado: input.telefone_normalizado,
-    origem: input.origem,
-    campanha: input.campanha,
-    ganho_em: input.entrou_em,
-  });
+  const { data, error } = await supabase
+    .from('tracker_ganhos')
+    .insert({
+      deal_id: dealKey,
+      contact_id: input.contact_id,
+      telefone: input.telefone,
+      telefone_normalizado: input.telefone_normalizado,
+      origem: input.origem,
+      campanha: input.campanha,
+      tipo_vaga: input.tipo_vaga,
+      passagem: input.passagem,
+      ganho_em: input.entrou_em,
+    })
+    .select('id, ganho_em')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function atualizarTipoVagaLead(
+  telefoneNormalizado: string,
+  tipo: 'clt' | 'estagio'
+): Promise<void> {
+  const { error } = await getSupabaseServer()
+    .from('tracker_leads')
+    .update({ tipo_vaga: tipo })
+    .eq('telefone_normalizado', telefoneNormalizado);
   if (error) throw error;
 }
 
@@ -336,7 +361,7 @@ export async function listTrackerLeads(range?: {
   for (let from = 0; ; from += pageSize) {
     let query = getSupabaseServer()
       .from('tracker_leads')
-      .select('id, telefone, telefone_normalizado, origem, campanha, headline, referrer, created_at')
+      .select('id, telefone, telefone_normalizado, origem, campanha, headline, referrer, tipo_vaga, created_at')
       .order('created_at', { ascending: false })
       .range(from, from + pageSize - 1);
 

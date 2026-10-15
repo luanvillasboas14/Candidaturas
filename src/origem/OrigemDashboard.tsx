@@ -24,6 +24,8 @@ interface CampanhaItem {
 
 interface MarcoData {
   total: number;
+  clt?: number;
+  estagio?: number;
   origens: OrigemItem[];
   redes?: OrigemItem[];
   campanhas: CampanhaItem[];
@@ -31,6 +33,8 @@ interface MarcoData {
 
 interface DashboardData {
   total: number;
+  clt?: number;
+  estagio?: number;
   origens: OrigemItem[];
   redes?: OrigemItem[];
   campanhas: CampanhaItem[];
@@ -408,6 +412,14 @@ function OrigemDateField({
   );
 }
 
+function TipoLinha({ clt, estagio }: { clt?: number; estagio?: number }) {
+  return (
+    <p className="origem-tipo">
+      CLT {(clt || 0).toLocaleString('pt-BR')} · Estágio {(estagio || 0).toLocaleString('pt-BR')}
+    </p>
+  );
+}
+
 function MarcoPainel({
   titulo,
   totalRotulo,
@@ -428,6 +440,7 @@ function MarcoPainel({
       <div className="origem-kpi">
         <span>{totalRotulo}</span>
         <strong>{total}</strong>
+        <TipoLinha clt={dados?.clt} estagio={dados?.estagio} />
       </div>
       {total === 0 ? (
         <p className="subtitle">{vazio}</p>
@@ -742,6 +755,7 @@ export function OrigemDashboard() {
                 <div className="origem-kpi">
                   <span>Total de leads</span>
                   <strong>{data.total}</strong>
+                  <TipoLinha clt={data.clt} estagio={data.estagio} />
                 </div>
 
                 <section>

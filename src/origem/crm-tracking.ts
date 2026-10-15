@@ -1,6 +1,7 @@
 import { crmRequest } from '@/lib/crm-dna';
 import { firstHumanCampaign } from './campaign-label';
 import { canonicalOrigem } from './lead-origin';
+import { tipoVagaDoContato, type TipoVaga } from './tipo-vaga';
 
 export interface ContactTracking {
   origem: string | null;
@@ -14,6 +15,7 @@ export interface ContactTracking {
 
 export interface ContactTrackingRecord extends ContactTracking {
   telefone: string;
+  tipoVaga: TipoVaga | null;
 }
 
 interface CrmContactTracking {
@@ -111,7 +113,7 @@ interface CrmContactsResponse {
 function withPhone(contact: CrmContactTracking, fallbackPhone?: string | null): ContactTrackingRecord | null {
   const telefone = text(contact.phone) || text(fallbackPhone);
   if (!telefone) return null;
-  return { telefone, ...toTracking(contact) };
+  return { telefone, tipoVaga: tipoVagaDoContato(contact), ...toTracking(contact) };
 }
 
 export async function getContactTrackingById(contactId: string): Promise<ContactTrackingRecord | null> {
