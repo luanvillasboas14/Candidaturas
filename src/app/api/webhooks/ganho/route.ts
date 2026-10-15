@@ -3,7 +3,7 @@ import { crmRequest } from '@/lib/crm-dna';
 import { normalizePhone } from '@/lib/phone';
 import { getTrackerLeadByPhone, insertTrackerGanho, salvarPassagemEnviada } from '@/lib/supabase-server';
 import { campaignDisplayName } from '@/origem/campaign-label';
-import { STAGE_ENVIADA_ID, STAGE_GANHO_ID } from '@/origem/crm-entradas';
+import { STAGE_GANHO_ID, STAGE_SELETIVO_ID } from '@/origem/crm-entradas';
 import { getContactTrackingById } from '@/origem/crm-tracking';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const prefix = stageId === STAGE_GANHO_ID ? 'ganho' : stageId === STAGE_ENVIADA_ID ? 'enviada' : null;
+    const prefix = stageId === STAGE_GANHO_ID ? 'ganho' : stageId === STAGE_SELETIVO_ID ? 'seletivo' : null;
     if (!prefix) {
       return NextResponse.json({ success: true, ignored: true });
     }
@@ -132,7 +132,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (prefix === 'enviada') {
+    if (prefix === 'seletivo') {
       await salvarPassagemEnviada({
         prefix,
         deal_id: referencia,

@@ -69,6 +69,7 @@ interface CrmNegociosLista {
 const STAGE_LEAD_ENTRADA_ID = 'cmuwy4al20inhpq016r5o75gn';
 export const STAGE_GANHO_ID = 'c4682cb0a16da46e88f3ad82b196e4e45';
 export const STAGE_ENVIADA_ID = 'cmq0moi0n0a09p601iwxl56uz';
+export const STAGE_SELETIVO_ID = 'cmq0lqtoo09zup601ofbwckk0';
 
 interface CrmMarco {
   type?: string;

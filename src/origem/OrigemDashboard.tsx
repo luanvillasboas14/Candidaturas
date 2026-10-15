@@ -564,7 +564,7 @@ function ConversaoGrafico({
       <h2>Conversão</h2>
       <div className="origem-conversao-graficos">
         <GraficoColunas
-          titulo="Leads → candidatura"
+          titulo="Leads → processo seletivo"
           cor="#ff7a08"
           linhas={linhas.map((linha) => ({
             nome: linha.nome,
@@ -572,7 +572,7 @@ function ConversaoGrafico({
           }))}
         />
         <GraficoColunas
-          titulo="Candidatura → ganho"
+          titulo="Processo seletivo → ganho"
           cor="#6a5cff"
           linhas={linhas.map((linha) => ({
             nome: linha.nome,
@@ -753,10 +753,10 @@ export function OrigemDashboard() {
           </div>
 
           <MarcoPainel
-            titulo="Candidatura enviada ao cliente"
+            titulo="Processo seletivo realizado"
             totalRotulo="Quem passou"
-            vazio="Ninguém passou por Candidatura enviada ao cliente nesse período."
-            unidade="enviadas"
+            vazio="Ninguém passou por Processo seletivo realizado nesse período."
+            unidade="realizados"
             dados={data.enviadas}
           />
           <MarcoPainel
@@ -774,7 +774,7 @@ export function OrigemDashboard() {
         />
         <div className="origem-columns">
           <CampanhasLista titulo="Campanhas dos leads" itens={data.campanhas} />
-          <CampanhasLista titulo="Campanhas da candidatura" itens={data.enviadas?.campanhas || []} />
+          <CampanhasLista titulo="Campanhas do processo seletivo" itens={data.enviadas?.campanhas || []} />
           <CampanhasLista titulo="Campanhas dos ganhos" itens={data.ganhos?.campanhas || []} />
         </div>
         </>

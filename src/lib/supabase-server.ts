@@ -139,7 +139,7 @@ export async function listTrackerGanhos(range?: {
       .order('ganho_em', { ascending: false })
       .range(from, from + pageSize - 1);
 
-    query = query.not('deal_id', 'like', 'enviada:%');
+    query = query.not('deal_id', 'like', 'enviada:%').not('deal_id', 'like', 'seletivo:%');
     if (range?.from) {
       query = query.gte('ganho_em', `${range.from}T00:00:00.000-03:00`);
     }
@@ -165,7 +165,7 @@ export interface PassagemEnviadaRow {
 }
 
 async function listPassagens(
-  prefix: 'enviada' | 'ganho',
+  prefix: 'enviada' | 'seletivo' | 'ganho',
   range?: { from?: string | null; to?: string | null }
 ): Promise<PassagemEnviadaRow[]> {
   const rows: PassagemEnviadaRow[] = [];
@@ -212,7 +212,7 @@ export function listPassagensEnviadas(range?: {
   from?: string | null;
   to?: string | null;
 }): Promise<PassagemEnviadaRow[]> {
-  return listPassagens('enviada', range);
+  return listPassagens('seletivo', range);
 }
 
 export function listPassagensGanhos(range?: {
@@ -223,7 +223,7 @@ export function listPassagensGanhos(range?: {
 }
 
 export async function salvarPassagemEnviada(input: {
-  prefix?: 'enviada' | 'ganho';
+  prefix?: 'enviada' | 'seletivo' | 'ganho';
   deal_id: string;
   contact_id: string | null;
   telefone: string | null;
