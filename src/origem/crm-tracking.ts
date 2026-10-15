@@ -16,6 +16,7 @@ export interface ContactTracking {
 export interface ContactTrackingRecord extends ContactTracking {
   telefone: string;
   tipoVaga: TipoVaga | null;
+  adId: string | null;
 }
 
 interface CrmContactTracking {
@@ -30,7 +31,9 @@ interface CrmContactTracking {
   adUtmCampaign?: string | null;
   adHeadline?: string | null;
   adCtwaClid?: string | null;
+  adId?: string | null;
   adSourceId?: string | null;
+  adResolvedId?: string | null;
   adResolvedCampaignName?: string | null;
   adResolvedName?: string | null;
   ttadId?: string | null;
@@ -113,7 +116,12 @@ interface CrmContactsResponse {
 function withPhone(contact: CrmContactTracking, fallbackPhone?: string | null): ContactTrackingRecord | null {
   const telefone = text(contact.phone) || text(fallbackPhone);
   if (!telefone) return null;
-  return { telefone, tipoVaga: tipoVagaDoContato(contact), ...toTracking(contact) };
+  return {
+    telefone,
+    tipoVaga: tipoVagaDoContato(contact),
+    adId: text(contact.adId) || text(contact.adSourceId) || text(contact.adResolvedId),
+    ...toTracking(contact),
+  };
 }
 
 export async function getContactTrackingById(contactId: string): Promise<ContactTrackingRecord | null> {

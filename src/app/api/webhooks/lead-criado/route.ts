@@ -102,7 +102,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, ignored: true, event });
     }
 
-    let crmTracking: (ContactTracking & { telefone?: string; tipoVaga?: 'clt' | 'estagio' | null }) | null = null;
+    let crmTracking: (ContactTracking & {
+      telefone?: string;
+      tipoVaga?: 'clt' | 'estagio' | null;
+      adId?: string | null;
+    }) | null = null;
     try {
       crmTracking = contactId
         ? await getContactTrackingById(contactId)
@@ -160,6 +164,7 @@ export async function POST(request: Request) {
       fbclid: tracking.fbclid,
       gclid: tracking.gclid,
       referrer: tracking.referrer,
+      ad_id: crmTracking?.adId || null,
     });
     if (crmTracking?.tipoVaga) {
       await atualizarTipoVagaLead(telefoneNormalizado, crmTracking.tipoVaga);

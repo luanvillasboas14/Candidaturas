@@ -147,10 +147,25 @@ export async function POST(request: Request) {
         fbclid: trackingSalvo?.fbclid || null,
         gclid: trackingSalvo?.gclid || null,
         referrer: trackingSalvo?.referrer || null,
+        ad_id: trackingSalvo?.adId || null,
       });
     }
     if (tipoVaga && telefoneNormalizado) {
       await atualizarTipoVagaLead(telefoneNormalizado, tipoVaga);
+    }
+    if (trackingSalvo?.adId && telefoneNormalizado && lead) {
+      await upsertTrackerLead({
+        telefone: telefone || lead.telefone,
+        telefone_normalizado: telefoneNormalizado,
+        origem: lead.origem,
+        campanha: lead.campanha,
+        headline: lead.headline,
+        ctwa_clid: lead.ctwa_clid,
+        fbclid: lead.fbclid,
+        gclid: lead.gclid,
+        referrer: lead.referrer,
+        ad_id: trackingSalvo.adId,
+      });
     }
     if (atendimentoIa) {
       return NextResponse.json({
@@ -177,6 +192,7 @@ export async function POST(request: Request) {
       origem,
       campanha: campanhaSalva,
       tipo_vaga: tipoVaga,
+      ad_id: trackingSalvo?.adId || null,
       entrou_em: entrouEm,
     });
 

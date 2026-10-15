@@ -64,6 +64,7 @@ export async function upsertTrackerLead(input: {
   fbclid: string | null;
   gclid: string | null;
   referrer: string | null;
+  ad_id?: string | null;
 }): Promise<void> {
   const supabase = getSupabaseServer();
   const { data: existing, error: selectError } = await supabase
@@ -85,6 +86,7 @@ export async function upsertTrackerLead(input: {
     fbclid: input.fbclid,
     gclid: input.gclid,
     referrer: input.referrer,
+    ...(input.ad_id ? { ad_id: input.ad_id } : {}),
   };
 
   if (existing?.id) {
@@ -235,6 +237,7 @@ export async function salvarPassagemEnviada(input: {
   origem: string | null;
   campanha: string | null;
   tipo_vaga: 'clt' | 'estagio' | null;
+  ad_id: string | null;
   entrou_em: string;
 }): Promise<{ id: string; ganho_em: string }> {
   const dealKey = `${input.deal_id}:${input.entrou_em}`;
@@ -260,6 +263,7 @@ export async function salvarPassagemEnviada(input: {
       origem: input.origem,
       campanha: input.campanha,
       tipo_vaga: input.tipo_vaga,
+      ad_id: input.ad_id,
       passagem: input.passagem,
       ganho_em: input.entrou_em,
     })
