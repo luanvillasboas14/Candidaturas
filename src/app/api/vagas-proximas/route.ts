@@ -2,6 +2,7 @@ import { setDefaultResultOrder } from 'node:dns';
 import { NextResponse } from 'next/server';
 import { readEnv } from '@/lib/env';
 import { listActiveJobsForGeo } from '@/lib/supabase';
+import { getDnaWorkPool } from '@/lib/dna-work-db';
 import { listJobSchedulesByCodigo } from '@/vagas-proximas/dna-work-hours';
 import { geocodeCep, haversineKm, normalizeCep, type Coordinates } from '@/vagas-proximas/geo';
 import { JobContractType, NearbyJob } from '@/types/candidatura';
@@ -25,6 +26,61 @@ function parseTipos(value: unknown): JobContractType[] {
     if (tipo) unique.add(tipo);
   }
   return CONTRACT_TYPES.filter((tipo) => unique.has(tipo));
+}
+
+type SexoFiltro = 'M' | 'F';
+
+function parseSexo(value: unknown): SexoFiltro | null {
+  const raw = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  if (raw === 'M' || raw === 'F') return raw;
+  return null;
+}
+
+function parseIdade(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const numero = Number(value);
+  if (!Number.isInteger(numero) || numero < 1 || numero > 120) return Number.NaN;
+  return numero;
+}
+
+interface RequisitoVaga {
+  sexo: string;
+  idade: number | null;
+  idadeAte: number | null;
+}
+
+function numeroOuNulo(valor: unknown): number | null {
+  if (valor == null || String(valor).trim() === '') return null;
+  const numero = Number(valor);
+  return Number.isFinite(numero) ? numero : null;
+}
+
+async function listarRequisitos(): Promise<Map<string, RequisitoVaga[]>> {
+  const [rows] = await getDnaWorkPool().query(
+    `SELECT codigo, sexo, idade, idadeate FROM vaga WHERE status = 0 AND codigo <> ''`
+  );
+  const mapa = new Map<string, RequisitoVaga[]>();
+  for (const row of rows as { codigo: string; sexo: string | null; idade: unknown; idadeate: unknown }[]) {
+    const codigo = String(row.codigo || '').trim();
+    if (!codigo) continue;
+    const lista = mapa.get(codigo) || [];
+    lista.push({
+      sexo: String(row.sexo || '').trim().toUpperCase(),
+      idade: numeroOuNulo(row.idade),
+      idadeAte: numeroOuNulo(row.idadeate),
+    });
+    mapa.set(codigo, lista);
+  }
+  return mapa;
+}
+
+function vagaAceita(requisito: RequisitoVaga, sexo: SexoFiltro | null, idade: number | null): boolean {
+  if (sexo && requisito.sexo && requisito.sexo !== 'I' && requisito.sexo !== sexo) return false;
+  if (idade != null) {
+    if (requisito.idade != null && idade < requisito.idade) return false;
+    if (requisito.idadeAte != null && idade > requisito.idadeAte) return false;
+  }
+  return true;
 }
 
 function formatSalaryLabel(job: {
@@ -101,6 +157,8 @@ export async function POST(request: Request) {
     const cep = normalizeCep(typeof body.cep === 'string' ? body.cep : '');
     const raioKm = Number(body.raioKm);
     const tipos = parseTipos(body.tipos);
+    const sexo = parseSexo(body.sexo);
+    const idade = parseIdade(body.idade);
 
     if (!cep) {
       return NextResponse.json(
@@ -116,6 +174,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (Number.isNaN(idade)) {
+      return NextResponse.json(
+        { success: false, message: 'Informe a idade com um número de 1 a 120.' },
+        { status: 400 }
+      );
+    }
+
     if (tipos.length === 0) {
       return NextResponse.json(
         { success: false, message: 'Selecione CLT ou Estágio.' },
@@ -124,10 +189,12 @@ export async function POST(request: Request) {
     }
 
     const informado = coordenadasInformadas(body.lat, body.lng);
-    const [origin, jobs, schedules] = await Promise.all([
+    const filtrarPessoa = Boolean(sexo) || idade != null;
+    const [origin, jobs, schedules, requisitos] = await Promise.all([
       informado ? Promise.resolve(informado) : localizarCep(cep),
       listActiveJobsForGeo(),
       listJobSchedulesByCodigo(),
+      filtrarPessoa ? listarRequisitos() : Promise.resolve(new Map<string, RequisitoVaga[]>()),
     ]);
     if (!origin) {
       return NextResponse.json(
@@ -146,6 +213,10 @@ export async function POST(request: Request) {
         lng: job.longitude,
       });
       if (distanceKm > raioKm) continue;
+      if (filtrarPessoa) {
+        const regras = requisitos.get(job.codigo) || [];
+        if (!regras.some((regra) => vagaAceita(regra, sexo, idade))) continue;
+      }
 
       const horario = job.codigo ? schedules.get(job.codigo) || '' : '';
       const candidate: NearbyJob = {

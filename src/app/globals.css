@@ -908,7 +908,13 @@ body {
 
 .nearby-fields {
   display: grid;
-  grid-template-columns: 1fr 140px;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.nearby-filters {
+  display: grid;
+  grid-template-columns: 140px minmax(160px, 1fr) 120px;
   gap: 16px;
 }
 
@@ -1308,7 +1314,8 @@ body {
     display: none;
   }
 
-  .nearby-fields {
+  .nearby-fields,
+  .nearby-filters {
     grid-template-columns: 1fr;
   }
 

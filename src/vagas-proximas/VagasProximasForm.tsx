@@ -6,6 +6,11 @@ import { geocodeCep } from '@/vagas-proximas/geo';
 
 const RADIUS_OPTIONS = [5, 10, 15, 20, 30, 50];
 const CONTRACT_OPTIONS: JobContractType[] = ['CLT', 'Estágio'];
+const SEXO_OPTIONS = [
+  { valor: '', nome: 'Todos' },
+  { valor: 'M', nome: 'Masculino' },
+  { valor: 'F', nome: 'Feminino' },
+] as const;
 
 function formatCep(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 8);
@@ -61,6 +66,8 @@ function buildCandidateText(jobs: NearbyJob[]): string {
 export function VagasProximasForm() {
   const [cep, setCep] = useState('');
   const [raioKm, setRaioKm] = useState(10);
+  const [sexo, setSexo] = useState<'' | 'M' | 'F'>('');
+  const [idade, setIdade] = useState('');
   const [tipos, setTipos] = useState<JobContractType[]>(['CLT', 'Estágio']);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -68,13 +75,13 @@ export function VagasProximasForm() {
   const [jobs, setJobs] = useState<NearbyJob[] | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
-  const [isRadiusOpen, setIsRadiusOpen] = useState(false);
-  const radiusRef = useRef<HTMLDivElement>(null);
+  const [menuAberto, setMenuAberto] = useState<'raio' | 'sexo' | null>(null);
+  const filtrosRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (radiusRef.current && !radiusRef.current.contains(event.target as Node)) {
-        setIsRadiusOpen(false);
+      if (filtrosRef.current && !filtrosRef.current.contains(event.target as Node)) {
+        setMenuAberto(null);
       }
     }
 
@@ -129,6 +136,8 @@ export function VagasProximasForm() {
         body: JSON.stringify({
           cep,
           raioKm,
+          sexo,
+          idade: idade.trim() ? Number(idade) : null,
           tipos,
           ...(ponto ? { lat: ponto.lat, lng: ponto.lng } : {}),
         }),
@@ -179,35 +188,86 @@ export function VagasProximasForm() {
             required
           />
         </div>
+      </div>
 
-        <div className="field" ref={radiusRef}>
-          <label htmlFor="raio">Raio</label>
-          <button
-            id="raio"
-            type="button"
-            className="radius-trigger"
-            onClick={() => setIsRadiusOpen((open) => !open)}
-            disabled={isLoading}
-          >
-            {raioKm} km
-          </button>
-          {isRadiusOpen && (
-            <div className="dropdown radius-dropdown">
-              {RADIUS_OPTIONS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className={`dropdown-item${option === raioKm ? ' selected' : ''}`}
-                  onClick={() => {
-                    setRaioKm(option);
-                    setIsRadiusOpen(false);
-                  }}
-                >
-                  <span className="dropdown-title">{option} km</span>
-                </button>
-              ))}
-            </div>
-          )}
+      <div className="field" ref={filtrosRef}>
+        <span className="filter-label">Filtros</span>
+        <div className="nearby-filters">
+          <div className="field">
+            <label htmlFor="raio">Distância</label>
+            <button
+              id="raio"
+              type="button"
+              className="radius-trigger"
+              aria-expanded={menuAberto === 'raio'}
+              onClick={() => setMenuAberto((atual) => (atual === 'raio' ? null : 'raio'))}
+              disabled={isLoading}
+            >
+              {raioKm} km
+            </button>
+            {menuAberto === 'raio' && (
+              <div className="dropdown radius-dropdown">
+                {RADIUS_OPTIONS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`dropdown-item${option === raioKm ? ' selected' : ''}`}
+                    onClick={() => {
+                      setRaioKm(option);
+                      setMenuAberto(null);
+                    }}
+                  >
+                    <span className="dropdown-title">{option} km</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="field">
+            <label htmlFor="sexo">Sexo</label>
+            <button
+              id="sexo"
+              type="button"
+              className="radius-trigger"
+              aria-expanded={menuAberto === 'sexo'}
+              onClick={() => setMenuAberto((atual) => (atual === 'sexo' ? null : 'sexo'))}
+              disabled={isLoading}
+            >
+              {SEXO_OPTIONS.find((item) => item.valor === sexo)?.nome}
+            </button>
+            {menuAberto === 'sexo' && (
+              <div className="dropdown radius-dropdown">
+                {SEXO_OPTIONS.map((option) => (
+                  <button
+                    key={option.valor || 'todos'}
+                    type="button"
+                    className={`dropdown-item${option.valor === sexo ? ' selected' : ''}`}
+                    onClick={() => {
+                      setSexo(option.valor);
+                      setMenuAberto(null);
+                    }}
+                  >
+                    <span className="dropdown-title">{option.nome}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="field">
+            <label htmlFor="idade">Idade</label>
+            <input
+              id="idade"
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              value={idade}
+              onChange={(event) => setIdade(event.target.value.replace(/\D/g, '').slice(0, 3))}
+              placeholder="18"
+              disabled={isLoading}
+            />
+          </div>
         </div>
       </div>
 

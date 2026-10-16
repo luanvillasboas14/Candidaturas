@@ -3,7 +3,7 @@
 Rota da tela: `/` (`src/app/page.tsx`). `/vagas-proximas` redireciona para `/`.
 
 ## O que faz
-O atendente informa CEP, raio e tipo (`CLT` e/ou `Estágio`). O sistema geocodifica o CEP e lista vagas da tabela `jobs_enriched` dentro do raio. Cada vaga mostra o horário de trabalho quando o `codigo` existe no webhook de horários. Vagas iguais (mesmo título, empresa, local, tipo e salário) entram uma vez só, ficando a mais próxima. Se a diferença for só o horário, a linha mostra cada horário. O texto para o candidato usa endereço, horário (quando existir) e salário (0 = salário a combinar; com benefícios = salário + benefícios), sem distância. Com uma vaga, termina com “Possui interesse?”. Com várias, “Possui interesse? Se sim, nos informe o número da vaga.” Se a vaga tem folga (no texto da carga ou por trabalhar 6–7 dias), isso entra no horário.
+O atendente informa o CEP e o tipo (`CLT` e/ou `Estágio`). Nos filtros ficam a distância (o raio que já existia), o sexo e a idade da pessoa. Sexo e idade são opcionais. Sem eles, a lista não muda. Com sexo, entra a vaga marcada com esse sexo ou com sexo indiferente. Com idade, entra a vaga cuja faixa cobre essa idade. A distância continua sendo o raio a partir do CEP. O sistema geocodifica o CEP e lista vagas da tabela `jobs_enriched` dentro do raio. Cada vaga mostra o horário de trabalho quando o `codigo` existe no webhook de horários. Vagas iguais (mesmo título, empresa, local, tipo e salário) entram uma vez só, ficando a mais próxima. Se a diferença for só o horário, a linha mostra cada horário. O texto para o candidato usa endereço, horário (quando existir) e salário (0 = salário a combinar; com benefícios = salário + benefícios), sem distância. Com uma vaga, termina com “Possui interesse?”. Com várias, “Possui interesse? Se sim, nos informe o número da vaga.” Se a vaga tem folga (no texto da carga ou por trabalhar 6–7 dias), isso entra no horário.
 
 ## Arquivos desta página
 - `src/app/page.tsx` — tela.
@@ -11,7 +11,7 @@ O atendente informa CEP, raio e tipo (`CLT` e/ou `Estágio`). O sistema geocodif
 - `src/vagas-proximas/VagasProximasForm.tsx` — CEP, raio, tipos e texto.
 - `src/vagas-proximas/geo.ts` — geocodificação do CEP e distância.
 - `src/vagas-proximas/dna-work-hours.ts` — horários.
-- `src/app/api/vagas-proximas/route.ts` — `POST` com `cep`, `raioKm` e `tipos`.
+- `src/app/api/vagas-proximas/route.ts` — `POST` com `cep`, `raioKm`, `tipos` e, quando preenchidos, `sexo` (`M` ou `F`) e `idade`. Sexo e idade vêm da vaga aberta no Lightsail, pelo `codigo`.
 - `src/instrumentation.ts` — no Node, prefere IPv4 ao abrir conexão.
 - `src/lib/supabase.ts` — leitura de `jobs` / `jobs_enriched`.
 

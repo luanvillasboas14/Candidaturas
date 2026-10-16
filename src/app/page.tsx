@@ -6,7 +6,7 @@ export default function HomePage() {
       <div className="card card-wide nearby-page">
         <h1>Vagas próximas</h1>
         <p className="subtitle">
-          Informe o CEP, o raio e o tipo de vaga. Depois selecione o que vai no texto para o candidato.
+          Informe o CEP. Nos filtros, ajuste a distância, o sexo e a idade. Depois selecione o que vai no texto para o candidato.
         </p>
         <VagasProximasForm />
       </div>
