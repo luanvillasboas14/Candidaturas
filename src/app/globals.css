@@ -1797,6 +1797,25 @@ select option {
   border-color: rgba(239, 68, 68, 0.2);
 }
 
+.vaga-aviso {
+  margin-bottom: 22px;
+  text-align: left;
+  font-weight: 500;
+  line-height: 1.5;
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--text);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.vaga-aviso p {
+  margin: 0;
+}
+
+.vaga-aviso ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
 .candidate-list {
   display: flex;
   flex-direction: column;

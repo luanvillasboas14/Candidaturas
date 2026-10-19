@@ -27,6 +27,19 @@ function diaSaoPaulo(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 }
 
+async function idsFechadas(ids: string[]): Promise<Set<string>> {
+  const fechadas = new Set<string>();
+  for (let i = 0; i < ids.length; i += 100) {
+    const lote = ids.slice(i, i + 100);
+    const [rows] = await getDnaWorkPool().query<DnaRow[]>(`SELECT id_vaga, status FROM vaga WHERE id_vaga IN (?)`, [lote]);
+    for (const row of rows) {
+      const status = Number(row.status);
+      if (Number.isInteger(status) && status !== 0) fechadas.add(String(row.id_vaga));
+    }
+  }
+  return fechadas;
+}
+
 function texto(valor: unknown): string {
   return String(valor || '').trim();
 }
@@ -115,8 +128,10 @@ export async function listarConsultas(filtro: FiltroConsulta): Promise<{
     if (id && !nomes.has(id)) nomes.set(id, texto(consulta.empresa_nome) || 'Empresa');
   }
 
+  const fechadas = await idsFechadas((abertasResp.data || []).map((linha) => texto(linha.id)).filter(Boolean));
   const abertas = (abertasResp.data || []).flatMap((linha) => {
     const id = texto(linha.id);
+    if (fechadas.has(id)) return [];
     const empresa = texto(linha.empresa_id);
     const cargoLinha = texto(linha.cargo);
     if (!id || !empresa || !cargoLinha) return [];

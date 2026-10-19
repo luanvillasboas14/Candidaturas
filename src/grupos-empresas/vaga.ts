@@ -494,15 +494,23 @@ export async function listarVagas(): Promise<VagaLista[]> {
   const linhas = data || [];
   const ids = linhas.map((linha) => String(linha.id));
   const codigos = new Map<string, string>();
+  const fechadas = new Set<string>();
   if (ids.length) {
     const [rows] = await getDnaWorkPool().query<DnaRow[]>(
-      `SELECT id_vaga, codigo FROM vaga WHERE id_vaga IN (?)`,
+      `SELECT id_vaga, codigo, status FROM vaga WHERE id_vaga IN (?)`,
       [ids]
     );
-    for (const row of rows) codigos.set(String(row.id_vaga), String(row.codigo || ''));
+    for (const row of rows) {
+      const id = String(row.id_vaga);
+      codigos.set(id, String(row.codigo || ''));
+      const status = Number(row.status);
+      if (Number.isInteger(status) && status !== 0) fechadas.add(id);
+    }
   }
 
   return linhas.flatMap((linha) => {
+    const id = String(linha.id);
+    if (fechadas.has(id)) return [];
     const tipo = Number(linha.tipo_vaga);
     if (!TIPOS_VAGA.includes(tipo as TipoVaga)) return [];
     const bruto = linha.empresa;
