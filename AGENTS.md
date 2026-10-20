@@ -13,6 +13,7 @@ Quando criar ou alterar rota, tabela, variável de ambiente ou regra de negócio
 - [Ativação Infojobs](docs/ativacao-infojobs.md) — `/ativacao-infojobs`
 - [Banco de Candidatos](docs/banco-candidatos.md) — `/banco-candidatos`
 - [Gerador de currículo](docs/gerador-curriculo.md) — `/gerador-curriculo`
+- [Gerador de TCE](docs/gerador-tce.md) — `/gerador-tce`
 - [Grupos e empresas](docs/grupos-empresas.md) — `/grupos-empresas`
 - [Consultar vagas](docs/consultar-vagas.md) — `/consultar-vagas`
 - [Fora do GitHub](docs/fora-do-github.md) — n8n, EasyPanel, CRM, Supabase
@@ -23,7 +24,7 @@ Quando criar ou alterar rota, tabela, variável de ambiente ou regra de negócio
 - Client Components só para formulário/dashboard (`'use client'`).
 - Supabase: anon key no frontend, service role key só no backend.
 - Telefone sempre normalizado para E.164 (`55DDNNNNNNNN`).
-- A aba lateral navega entre Vagas próximas, Só contrato, Origem, Ativação Cruzeiro, Ativação Infojobs, Banco de Candidatos, Gerador de currículo, Grupos e empresas e Consultar vagas. A home abre em Vagas próximas.
+- A aba lateral navega entre Vagas próximas, Só contrato, Origem, Ativação Cruzeiro, Ativação Infojobs, Banco de Candidatos, Gerador de currículo, Gerador de TCE, Grupos e empresas e Consultar vagas. A home abre em Vagas próximas.
 
 ## Variáveis de ambiente obrigatórias
 - `NEXT_PUBLIC_SUPABASE_URL`

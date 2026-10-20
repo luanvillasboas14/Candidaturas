@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
     pagesBufferLength: 12,
   },
   output: 'standalone',
-  serverExternalPackages: ['tesseract.js', 'tesseract.js-core', 'sharp', 'pg'],
+  serverExternalPackages: ['tesseract.js', 'tesseract.js-core', 'sharp', 'pg', 'mysql2'],
   outputFileTracingIncludes: {
     '/api/so-contrato/analisar': tesseractTrace,
     '/src/app/api/so-contrato/analisar/route': tesseractTrace,
@@ -27,6 +27,11 @@ const nextConfig: NextConfig = {
       {
         source: '/ativacao-infojobs',
         destination: 'https://dnaworkia-disparador-infojobs.vkfaze.easypanel.host/',
+        permanent: false,
+      },
+      {
+        source: '/gerador-tce',
+        destination: 'https://dnaworkia-tce-gerador.vkfaze.easypanel.host/',
         permanent: false,
       },
     ];

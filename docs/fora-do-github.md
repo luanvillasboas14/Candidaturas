@@ -13,6 +13,7 @@ Este arquivo lista o que o app usa e **não vive neste repositório**.
 - Sync de localização: `POST https://dnaworkia-candidaturas.vkfaze.easypanel.host/api/ativacao-cruzeiro/geo-sync`. A tela também dispara se o snapshot de matriculados for novo. Um cron diário depois das 12h (Brasília) cobre o upload do dia.
 - App em produção: `https://dnaworkia-candidaturas.vkfaze.easypanel.host`
 - Ativação Infojobs só redireciona para o painel Pandapé → Bwipo CRM: `https://dnaworkia-disparador-infojobs.vkfaze.easypanel.host/`. Esse painel é outro app no EasyPanel; usuário e senha ficam nele.
+- Gerador de TCE só redireciona para `https://dnaworkia-tce-gerador.vkfaze.easypanel.host/`. Esse gerador é outro app no EasyPanel.
 
 ## Supabase DNA
 - Projeto `moemgftlmncdqfvzscmq`. As migrations em `sql/` são executadas no SQL Editor, não no deploy.

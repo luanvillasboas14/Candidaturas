@@ -13,6 +13,7 @@ const NAV_ITEMS: { href: string; label: string; document?: boolean }[] = [
   { href: '/ativacao-infojobs', label: 'Ativação Infojobs', document: true },
   { href: '/banco-candidatos', label: 'Banco de Candidatos' },
   { href: '/gerador-curriculo', label: 'Gerador de currículo' },
+  { href: '/gerador-tce', label: 'Gerador de TCE', document: true },
   { href: '/grupos-empresas', label: 'Grupos, Empresas e Vagas' },
   { href: '/consultar-vagas', label: 'Consultar vagas' },
 ];
