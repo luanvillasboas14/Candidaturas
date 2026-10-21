@@ -8,7 +8,7 @@ O atendente informa o CEP e o tipo (`CLT` e/ou `Estágio`). Nos filtros ficam a 
 ## Arquivos desta página
 - `src/app/page.tsx` — tela. No topo, o aviso de empresa com vaga aberta ainda não cadastrada.
 - `src/vagas-abertas/AvisoEmpresasPendentes.tsx` — esse aviso.
-- `src/vagas-abertas/sync.ts` — leitura das vagas abertas do agente e gravação só do `id_vaga` que ainda não existe. A vaga que já está no Supabase e não está mais aberta no Lightsail continua na tabela e sai das listas.
+- `src/vagas-abertas/sync.ts` — leitura das vagas abertas do agente e gravação só do `id_vaga` que ainda não existe. A vaga que já está no Supabase e não está mais aberta no Lightsail é apagada de `vaga`.
 - `src/vagas-abertas/agendar.ts` — 00:00, 06:00, 12:00 e 18:00 em São Paulo.
 - `src/app/api/vagas-abertas/sync/route.ts` — `POST` que dispara a mesma entrada na hora.
 - `src/app/vagas-proximas/page.tsx` — redirect para `/`.

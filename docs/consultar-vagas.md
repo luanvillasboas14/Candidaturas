@@ -3,7 +3,7 @@
 Rota da tela: `/consultar-vagas`.
 
 ## O que faz
-A pessoa filtra por cargo, empresa e status. A lista de abertas esconde a vaga cujo status no Lightsail não é mais 0. Uma vaga aberta pode ser marcada como contratada ou cancelada. Demitida só aparece numa consulta que já está contratada. Uma consulta cancelada pode ser aberta de novo: a vaga volta para a lista e a consulta sai. O desfecho fica em `consulta_vaga`. A vaga some da tabela `vaga` do Supabase e continua no MySQL, com outro status.
+A pessoa filtra por cargo, empresa e status. A lista de abertas esconde a vaga cujo status no Lightsail não é mais 0. A entrada automática apaga essa linha de `vaga`. Uma vaga aberta pode ser marcada como contratada ou cancelada. Demitida só aparece numa consulta que já está contratada. Uma consulta cancelada pode ser aberta de novo: a vaga volta para a lista e a consulta sai. O desfecho fica em `consulta_vaga`. A vaga some da tabela `vaga` do Supabase e continua no MySQL, com outro status.
 
 Filtros: cargo pelo texto, empresa pelo nome fantasia (também as que só restam na consulta) e status (contratada, demitida ou cancelada). O status não esconde as vagas ainda abertas.
 

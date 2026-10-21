@@ -195,6 +195,21 @@ async function vagasParaChave(empresaIds: string[]): Promise<Map<string, string>
       inicio += 500;
     }
   }
+  for (let i = 0; i < empresaIds.length; i += 40) {
+    const lote = empresaIds.slice(i, i + 40);
+    let inicio = 0;
+    while (true) {
+      const { data, error } = await supabase.from('vaga_repetida').select(colunas).in('empresa_id', lote).range(inicio, inicio + 499);
+      if (error) throw new Error(error.message);
+      for (const row of data || []) {
+        const vagaId = texto(row.vaga_id);
+        if (!vagaId || grupos.has(chave(row))) continue;
+        grupos.set(chave(row), vagaId);
+      }
+      if (!data || data.length < 500) break;
+      inicio += 500;
+    }
+  }
   return grupos;
 }
 
@@ -367,7 +382,7 @@ export async function sincronizarVagasAbertas(slot: string): Promise<SyncVagasRe
   }
 
   const empresas = [...puladas.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-  const fora = await contarFora();
+  const fora = await apagarFechadas();
 
   const resultado = {
     slot,
@@ -384,7 +399,7 @@ export async function sincronizarVagasAbertas(slot: string): Promise<SyncVagasRe
   return resultado;
 }
 
-async function contarFora(): Promise<number> {
+async function apagarFechadas(): Promise<number> {
   const supabase = getSupabaseServer();
   const ids: string[] = [];
   let inicio = 0;
@@ -399,15 +414,21 @@ async function contarFora(): Promise<number> {
     inicio += 500;
   }
 
-  let fora = 0;
+  const fechar: string[] = [];
   const pool = getDnaWorkPool();
   for (let i = 0; i < ids.length; i += 100) {
     const lote = ids.slice(i, i + 100);
     const [rows] = await pool.query(`select id_vaga, status from vaga where id_vaga in (?)`, [lote]);
     for (const row of rows as Linha[]) {
       const status = Number(row.status);
-      if (texto(row.id_vaga) && Number.isInteger(status) && status !== 0) fora += 1;
+      const id = texto(row.id_vaga);
+      if (id && Number.isInteger(status) && status !== 0) fechar.push(id);
     }
   }
-  return fora;
+
+  for (let i = 0; i < fechar.length; i += 100) {
+    const { error } = await supabase.from('vaga').delete().in('id', fechar.slice(i, i + 100));
+    if (error) throw new Error(error.message);
+  }
+  return fechar.length;
 }
