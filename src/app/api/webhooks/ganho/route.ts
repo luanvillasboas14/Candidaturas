@@ -8,7 +8,7 @@ import {
   upsertTrackerLead,
 } from '@/lib/supabase-server';
 import { campaignDisplayName } from '@/origem/campaign-label';
-import { STAGE_ATENDIMENTO_IA_ID, STAGE_GANHO_ID, STAGE_SELETIVO_ID } from '@/origem/crm-entradas';
+import { STAGE_ATENDIMENTO_CANDIDATURA_ID, STAGE_ATENDIMENTO_IA_ID, STAGE_GANHO_ID, STAGE_SELETIVO_ID } from '@/origem/crm-entradas';
 import { getContactTrackingById, type ContactTrackingRecord } from '@/origem/crm-tracking';
 import type { TipoVaga } from '@/origem/tipo-vaga';
 
@@ -79,7 +79,14 @@ export async function POST(request: Request) {
     }
 
     const atendimentoIa = stageId === STAGE_ATENDIMENTO_IA_ID;
-    const passagem = stageId === STAGE_GANHO_ID ? 'ganho' : stageId === STAGE_SELETIVO_ID ? 'seletivo' : null;
+    const passagem =
+      stageId === STAGE_GANHO_ID
+        ? 'ganho'
+        : stageId === STAGE_SELETIVO_ID
+          ? 'seletivo'
+          : stageId === STAGE_ATENDIMENTO_CANDIDATURA_ID
+            ? 'atendimento'
+            : null;
     if (!passagem && !atendimentoIa) {
       return NextResponse.json({ success: true, ignored: true });
     }

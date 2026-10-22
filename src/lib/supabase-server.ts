@@ -169,7 +169,7 @@ export interface PassagemEnviadaRow {
 }
 
 async function listPassagens(
-  prefix: 'enviada' | 'seletivo' | 'ganho',
+  prefix: 'enviada' | 'seletivo' | 'ganho' | 'atendimento',
   range?: { from?: string | null; to?: string | null }
 ): Promise<PassagemEnviadaRow[]> {
   const rows: PassagemEnviadaRow[] = [];
@@ -228,8 +228,15 @@ export function listPassagensGanhos(range?: {
   return listPassagens('ganho', range);
 }
 
+export function listPassagensAtendimento(range?: {
+  from?: string | null;
+  to?: string | null;
+}): Promise<PassagemEnviadaRow[]> {
+  return listPassagens('atendimento', range);
+}
+
 export async function salvarPassagemEnviada(input: {
-  passagem: 'seletivo' | 'ganho';
+  passagem: 'seletivo' | 'ganho' | 'atendimento';
   deal_id: string;
   contact_id: string | null;
   telefone: string | null;

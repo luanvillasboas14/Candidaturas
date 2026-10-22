@@ -28,8 +28,19 @@ export type Empresa = {
   logradouro: string;
   numero: string | null;
   complemento: string | null;
+  bairro: string;
+  cidade: string;
+  uf: string;
   criado_em: string;
 };
+
+export function localDaEmpresa(empresa: Pick<Empresa, 'bairro' | 'cidade' | 'uf'>): string {
+  const bairro = empresa.bairro.trim();
+  const cidade = empresa.cidade.trim();
+  const uf = empresa.uf.trim();
+  const cidadeUf = [cidade, uf].filter(Boolean).join(' / ');
+  return [bairro, cidadeUf].filter(Boolean).join(' - ');
+}
 
 export function digitosCnpj(value: string): string {
   return value.replace(/\D/g, '').slice(0, 14);

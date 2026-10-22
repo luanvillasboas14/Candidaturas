@@ -8,6 +8,7 @@ import {
   digitosCnpj,
   exigirTexto,
   normalizarContato,
+  localDaEmpresa,
   normalizarEndereco,
   type ContatoNormalizado,
   type Empresa,
@@ -315,6 +316,43 @@ export async function atualizarGrupo(id: string, input: GrupoInput): Promise<Gru
   return data as Grupo;
 }
 
+async function locaisDasEmpresas(ids: string[]): Promise<Map<string, { bairro: string; cidade: string; uf: string }>> {
+  const mapa = new Map<string, { bairro: string; cidade: string; uf: string }>();
+  if (!ids.length) return mapa;
+  const pool = getDnaWorkPool();
+  for (let i = 0; i < ids.length; i += 100) {
+    const lote = ids.slice(i, i + 100);
+    const [rows] = await pool.query<DnaRow[]>(
+      `SELECT id_empresa, bairro, cidade, uf FROM empresa WHERE id_empresa IN (?)`,
+      [lote]
+    );
+    for (const row of rows) {
+      mapa.set(String(row.id_empresa), {
+        bairro: String(row.bairro || '').trim(),
+        cidade: String(row.cidade || '').trim(),
+        uf: String(row.uf || '').trim(),
+      });
+    }
+  }
+  return mapa;
+}
+
+async function preencherLocal(linhas: { id: string; local: string }[]): Promise<void> {
+  const preenchidas = linhas.filter((linha) => linha.local);
+  if (!preenchidas.length) return;
+  const supabase = getSupabaseServer();
+  const { error: erroColuna } = await supabase.from('empresa').select('local').limit(1);
+  if (erroColuna) return;
+  const { data, error } = await supabase.from('empresa').select('id, local');
+  if (error || !data) return;
+  const atual = new Map(data.map((row) => [String(row.id), String(row.local || '')]));
+  for (const linha of preenchidas) {
+    if (atual.get(linha.id) === linha.local) continue;
+    const { error: erroUpdate } = await supabase.from('empresa').update({ local: linha.local }).eq('id', linha.id);
+    if (erroUpdate) return;
+  }
+}
+
 export async function listarEmpresas(): Promise<Empresa[]> {
   const { data, error } = await getSupabaseServer()
     .from('empresa')
@@ -323,9 +361,24 @@ export async function listarEmpresas(): Promise<Empresa[]> {
     )
     .order('razao_social', { ascending: true });
   if (error) throw new Error(mensagemSupabase(error.message));
+  const locais = await locaisDasEmpresas((data || []).map((row) => String(row.id)));
+  await preencherLocal(
+    (data || []).map((row) => {
+      const local = locais.get(String(row.id));
+      return {
+        id: String(row.id),
+        local: localDaEmpresa({
+          bairro: local?.bairro || '',
+          cidade: local?.cidade || '',
+          uf: local?.uf || '',
+        }),
+      };
+    })
+  );
   return (data || []).map((row) => {
     const grupo = row.grupo as { nome?: string } | { nome?: string }[] | null;
     const grupoNome = Array.isArray(grupo) ? grupo[0]?.nome : grupo?.nome;
+    const local = locais.get(String(row.id));
     return {
       id: row.id as string,
       grupo_id: (row.grupo_id as string | null) || null,
@@ -339,6 +392,9 @@ export async function listarEmpresas(): Promise<Empresa[]> {
       logradouro: (row.logradouro as string | null) || '',
       numero: (row.numero as string | null) || null,
       complemento: (row.complemento as string | null) || null,
+      bairro: local?.bairro || '',
+      cidade: local?.cidade || '',
+      uf: local?.uf || '',
       criado_em: row.criado_em as string,
     };
   });

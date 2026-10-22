@@ -40,6 +40,7 @@ interface DashboardData {
   campanhas: CampanhaItem[];
   ganhos?: MarcoData;
   enviadas?: MarcoData;
+  atendimentos?: MarcoData;
 }
 
 interface PieSlice {
@@ -546,16 +547,19 @@ function GraficoColunas({
 
 function ConversaoGrafico({
   leads,
+  atendimentos,
   enviadas,
   ganhos,
 }: {
   leads: OrigemItem[];
+  atendimentos: OrigemItem[];
   enviadas: OrigemItem[];
   ganhos: OrigemItem[];
 }) {
   const linhas = useMemo(() => {
     const nomes = new Set<string>([
       ...leads.map((item) => item.nome),
+      ...atendimentos.map((item) => item.nome),
       ...enviadas.map((item) => item.nome),
       ...ganhos.map((item) => item.nome),
     ]);
@@ -565,17 +569,26 @@ function ConversaoGrafico({
       .map((nome) => ({
         nome,
         leads: quantidade(leads, nome),
+        atendimentos: quantidade(atendimentos, nome),
         enviadas: quantidade(enviadas, nome),
         ganhos: quantidade(ganhos, nome),
       }))
-      .sort((a, b) => b.leads - a.leads || b.enviadas - a.enviadas || a.nome.localeCompare(b.nome));
+      .sort((a, b) => b.leads - a.leads || b.atendimentos - a.atendimentos || b.enviadas - a.enviadas || a.nome.localeCompare(b.nome));
     return itens;
-  }, [leads, enviadas, ganhos]);
+  }, [leads, atendimentos, enviadas, ganhos]);
 
   return (
     <section className="origem-conversao">
       <h2>Conversão</h2>
       <div className="origem-conversao-graficos">
+        <GraficoColunas
+          titulo="Leads → atendimento"
+          cor="#0ea5e9"
+          linhas={linhas.map((linha) => ({
+            nome: linha.nome,
+            taxa: taxaNumero(linha.atendimentos, linha.leads),
+          }))}
+        />
         <GraficoColunas
           titulo="Leads → processo seletivo"
           cor="#ff7a08"
@@ -767,6 +780,13 @@ export function OrigemDashboard() {
           </div>
 
           <MarcoPainel
+            titulo="Atendimento candidatura"
+            totalRotulo="Quem passou"
+            vazio="Ninguém passou por Atendimento candidatura nesse período."
+            unidade="atendimentos"
+            dados={data.atendimentos}
+          />
+          <MarcoPainel
             titulo="Processo seletivo realizado"
             totalRotulo="Quem passou"
             vazio="Ninguém passou por Processo seletivo realizado nesse período."
@@ -783,11 +803,13 @@ export function OrigemDashboard() {
         </div>
         <ConversaoGrafico
           leads={data.origens}
+          atendimentos={data.atendimentos?.origens || []}
           enviadas={data.enviadas?.origens || []}
           ganhos={data.ganhos?.origens || []}
         />
         <div className="origem-columns">
           <CampanhasLista titulo="Campanhas dos leads" itens={data.campanhas} />
+          <CampanhasLista titulo="Campanhas do atendimento" itens={data.atendimentos?.campanhas || []} />
           <CampanhasLista titulo="Campanhas do processo seletivo" itens={data.enviadas?.campanhas || []} />
           <CampanhasLista titulo="Campanhas dos ganhos" itens={data.ganhos?.campanhas || []} />
         </div>

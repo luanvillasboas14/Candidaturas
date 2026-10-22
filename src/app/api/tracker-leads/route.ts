@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
+  listPassagensAtendimento,
   listPassagensEnviadas,
   listPassagensGanhos,
   listTrackerLeads,
@@ -158,15 +159,16 @@ export async function GET(request: Request) {
       readDate(url.searchParams.get('from')),
       readDate(url.searchParams.get('to'))
     );
-    const [entradas, rows, ganhosPassagens, enviadas] = await Promise.all([
+    const [entradas, rows, ganhosPassagens, enviadas, atendimentos] = await Promise.all([
       listEntradasCrm({ from, to }),
       listTrackerLeads({ from, to }),
       listPassagensGanhos({ from, to }),
       listPassagensEnviadas({ from, to }),
+      listPassagensAtendimento({ from, to }),
     ]);
     const contas = juntarEntradas(entradas, rows);
     const leads = resumirContas(contas);
-    const telefones = [...ganhosPassagens, ...enviadas]
+    const telefones = [...ganhosPassagens, ...enviadas, ...atendimentos]
       .map((row) => row.telefone_normalizado)
       .filter((phone): phone is string => Boolean(phone));
     const redesSalvas = await listTrackerRedes(telefones);
@@ -177,6 +179,7 @@ export async function GET(request: Request) {
       ...leads,
       ganhos: resumirContas(contasDePassagens(ganhosPassagens, porTelefone)),
       enviadas: resumirContas(contasDePassagens(enviadas, porTelefone)),
+      atendimentos: resumirContas(contasDePassagens(atendimentos, porTelefone)),
     });
   } catch (error) {
     console.error('Erro ao listar tracker_leads:', error);

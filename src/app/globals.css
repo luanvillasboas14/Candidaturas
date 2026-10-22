@@ -206,7 +206,7 @@ body {
 
 .origem-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(220px, 0.85fr) minmax(220px, 0.85fr);
+  grid-template-columns: minmax(0, 1.1fr) repeat(3, minmax(180px, 0.85fr));
   gap: 32px;
   align-items: start;
 }
@@ -235,7 +235,7 @@ body {
 
 .origem-conversao-graficos {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 28px;
 }
 

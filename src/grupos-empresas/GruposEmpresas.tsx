@@ -13,7 +13,7 @@ import {
 } from './horario';
 import type { VagaFormulario, VagaLista, VagaModelo } from './vaga';
 import type { Empresa, Grupo } from './validar';
-import { cepMascarado, cnpjMascarado, digitosCep, digitosCnpj } from './validar';
+import { cepMascarado, cnpjMascarado, digitosCep, digitosCnpj, localDaEmpresa } from './validar';
 
 type Modo = 'grupo' | 'empresa';
 type Aba = Modo | 'vaga';
@@ -356,6 +356,7 @@ export function GruposEmpresas() {
       inclui(empresa.razao_social, termo) ||
       inclui(empresa.nome_fantasia, termo) ||
       inclui(empresa.grupo_nome, termo) ||
+      inclui(localDaEmpresa(empresa), termo) ||
       (!empresa.grupo_id && inclui('Sem grupo', termo))
     );
   }
@@ -1086,6 +1087,15 @@ export function GruposEmpresas() {
                 onChange={(event) => setForm({ ...form, complemento: event.target.value })}
               />
             </div>
+            {editando ? (
+              <div className="field">
+                <Rotulo texto="Bairro" />
+                <input
+                  readOnly
+                  value={localDaEmpresa(empresas.find((empresa) => empresa.id === editando) || { bairro: '', cidade: '', uf: '' })}
+                />
+              </div>
+            ) : null}
           </>
         )}
         {aba === 'vaga' ? null : (
@@ -1206,7 +1216,7 @@ export function GruposEmpresas() {
             {...campoSemSugestao('q-m')}
             className="ge-busca"
             value={filtroEmpresas}
-            placeholder="Buscar por razão social, nome fantasia ou grupo"
+            placeholder="Buscar por razão social, nome fantasia, grupo ou bairro"
             onChange={(event) => setFiltroEmpresas(event.target.value)}
           />
           {erro ? null : empresas.length === 0 ? (
@@ -1223,6 +1233,7 @@ export function GruposEmpresas() {
                       {empresa.grupo_nome || 'Sem grupo'} · {cnpjMascarado(empresa.cnpj)} · {empresa.razao_social}
                     </span>
                     {linhaEndereco(empresa) ? <span>{linhaEndereco(empresa)}</span> : null}
+                    {localDaEmpresa(empresa) ? <span>{localDaEmpresa(empresa)}</span> : null}
                     <span>{contato(empresa.email, empresa.telefone)}</span>
                   </div>
                   <button type="button" className="ghost-button" onClick={() => editarEmpresa(empresa)}>

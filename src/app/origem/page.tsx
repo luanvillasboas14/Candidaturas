@@ -6,7 +6,7 @@ export default function OrigemPage() {
       <div className="card card-dashboard card-cv">
         <h1>Origem dos candidatos</h1>
         <p className="subtitle">
-          Quem entrou em Lead de entrada, quem passou por Processo seletivo realizado e quem entrou em Ganho. CLT ou estágio entra quando a pessoa chega em Atendimento IA.
+          Quem entrou em Lead de entrada, quem passou por Atendimento candidatura, por Processo seletivo realizado e quem entrou em Ganho. CLT ou estágio entra quando a pessoa chega em Atendimento IA.
         </p>
         <OrigemDashboard />
       </div>
