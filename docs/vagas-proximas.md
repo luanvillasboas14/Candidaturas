@@ -8,7 +8,9 @@ O atendente informa o CEP e o tipo (`CLT` e/ou `Estágio`). Nos filtros ficam a 
 ## Arquivos desta página
 - `src/app/page.tsx` — tela. No topo, o aviso de empresa com vaga aberta ainda não cadastrada.
 - `src/vagas-abertas/AvisoEmpresasPendentes.tsx` — esse aviso.
-- `src/vagas-abertas/sync.ts` — leitura das vagas abertas do agente e gravação só do `id_vaga` que ainda não existe. A vaga que já está no Supabase e não está mais aberta no Lightsail é apagada de `vaga`.
+- `src/vagas-abertas/sync.ts` — leitura das vagas abertas do agente e gravação só do `id_vaga` que ainda não existe. A vaga que já está no Supabase e não está mais aberta no Lightsail é apagada de `vaga`. Depois disso, o horário e o bairro da página Operacional no Notion entram se o código da vaga estiver em **Vagas abertas do dia (CLT)** ou **Estágio Atualizado**. Se o Notion estiver diferente, o Notion vale. Enquanto o código não aparecer lá, o horário continua o do sistema antigo (Lightsail / webhook). A busca seguinte (6 horas) tenta o Notion de novo.
+- `src/vagas-abertas/notion.ts` — leitura da página Operacional e gravação de horário e bairro.
+- `src/lib/notion.ts` — `NOTION_TOKEN`.
 - `src/vagas-abertas/agendar.ts` — 00:00, 06:00, 12:00 e 18:00 em São Paulo.
 - `src/app/api/vagas-abertas/sync/route.ts` — `POST` que dispara a mesma entrada na hora.
 - `src/app/vagas-proximas/page.tsx` — redirect para `/`.
@@ -23,4 +25,4 @@ O atendente informa o CEP e o tipo (`CLT` e/ou `Estágio`). Nos filtros ficam a 
 Cidade e rua vêm do ViaCEP. A coordenada do CEP vem da AwesomeAPI junto com essa consulta; a BrasilAPI só entra se essa coordenada não servir. Essa consulta roda no navegador, e a tela manda a coordenada para o servidor. O servidor só tenta localizar o CEP se a coordenada não vier. Uma falha ou demora de um desses serviços não derruba a busca. No servidor publicado a consulta sai por IPv4, porque o IPv6 do container não completa e o CEP ficava sem coordenada. A coordenada do próprio CEP entra primeiro e não é descartada por estar longe do centro nem por cair em outro município. A lista de vagas não filtra cidade: mede a distância e, se ninguém estiver no raio, a tela mostra que não há vagas próximas. O mapa só entra se o CEP não trouxer coordenada, e só com um resultado cujo CEP coincide no começo. O centro genérico de São Paulo continua de fora quando a API não achou o logradouro. Não assume São Paulo quando a API não devolve cidade. Não geocodifica só a cidade em São Paulo. Se nenhuma dessas fontes achar coordenada, o servidor consulta o Google com `GOOGLE_MAPS_API_KEY`, a mesma chave do cadastro de empresa. A chave fica só no servidor e não entra quando ViaCEP, AwesomeAPI, BrasilAPI ou o mapa já devolveram o ponto.
 
 ## Fora desta pasta
-Horário das vagas vem de `https://sistema.dnawork.ai/webhook/empresa.php`, cruzado pelo `codigo` da tabela `jobs`. Detalhe em `docs/fora-do-github.md`.
+Horário das vagas vem de `https://sistema.dnawork.ai/webhook/empresa.php`, cruzado pelo `codigo` da tabela `jobs`. Esse webhook é a fonte da tela enquanto a vaga não está no Notion. Quando o mesmo código aparece na página Operacional, o horário gravado no Lightsail (e o bairro da empresa) passam a ser os da coluna Mensagem. Detalhe em `docs/fora-do-github.md`.

@@ -40,6 +40,7 @@ Quando criar ou alterar rota, tabela, variável de ambiente ou regra de negócio
 - `ZAPSIGN_USER_TOKEN` (opcional) — assinatura automática da DNA; vazio = envio das outras partes segue
 - `ZAPSIGN_AGENTE_ID` (opcional, padrão `127`)
 - `GOOGLE_MAPS_API_KEY` — geocodifica o CEP da empresa nova. Só no `.env` / EasyPanel.
+- `NOTION_TOKEN` — lê horário e bairro na página Operacional. Só no `.env` / EasyPanel. Sem o token, a sincronização das vagas segue e o Notion é pulado.
 
 ## Compartilhado
 - `src/components/` — shell, tema.

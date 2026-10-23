@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { DIAS_HORARIO, registroHorario, type DiasGrade } from '@/grupos-empresas/horario';
 import { getDnaWorkPool } from '@/lib/dna-work-db';
 import { getSupabaseServer } from '@/lib/supabase-server';
+import { aplicarNotionNasVagas, type NotionVagasResultado } from '@/vagas-abertas/notion';
 
 type Linha = Record<string, unknown>;
 
@@ -19,6 +20,7 @@ export type SyncVagasResultado = {
   jaExistiam: number;
   fora: number;
   empresas: EmpresaAviso[];
+  notion: NotionVagasResultado;
 };
 
 function texto(valor: unknown): string {
@@ -383,6 +385,7 @@ export async function sincronizarVagasAbertas(slot: string): Promise<SyncVagasRe
 
   const empresas = [...puladas.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   const fora = await apagarFechadas();
+  const notion = await aplicarNotionNasVagas();
 
   const resultado = {
     slot,
@@ -391,6 +394,7 @@ export async function sincronizarVagasAbertas(slot: string): Promise<SyncVagasRe
     jaExistiam: existentes.size,
     fora,
     empresas,
+    notion,
   };
   const aviso = empresas.map((empresa) => `${empresa.nome} | ${empresa.cnpj || 'sem CNPJ'} | ${empresa.vagas}`).join('; ');
   console.log(
