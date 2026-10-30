@@ -24,6 +24,7 @@ Quando criar ou alterar rota, tabela, variável de ambiente ou regra de negócio
 - Client Components só para formulário/dashboard (`'use client'`).
 - Supabase: anon key no frontend, service role key só no backend.
 - Telefone sempre normalizado para E.164 (`55DDNNNNNNNN`).
+- Este app **não** copia vagas do Lightsail, **não** apaga vagas fechadas e **não** aplica horário do Notion. Não rode `sincronizarVagasAbertas` nem `POST /api/vagas-abertas/sync` para gravar.
 - A aba lateral navega entre Vagas próximas, Só contrato, Origem, Ativação Cruzeiro, Ativação Infojobs, Banco de Candidatos, Gerador de currículo, Gerador de TCE, Grupos e empresas e Consultar vagas. A home abre em Vagas próximas.
 
 ## Variáveis de ambiente obrigatórias
@@ -40,7 +41,7 @@ Quando criar ou alterar rota, tabela, variável de ambiente ou regra de negócio
 - `ZAPSIGN_USER_TOKEN` (opcional) — assinatura automática da DNA; vazio = envio das outras partes segue
 - `ZAPSIGN_AGENTE_ID` (opcional, padrão `127`)
 - `GOOGLE_MAPS_API_KEY` — geocodifica o CEP da empresa nova. Só no `.env` / EasyPanel.
-- `NOTION_TOKEN` — lê horário e bairro na página Operacional. Só no `.env` / EasyPanel. Sem o token, a sincronização das vagas segue e o Notion é pulado.
+- `NOTION_TOKEN` — legado. Este app não lê mais a página Operacional.
 
 ## Compartilhado
 - `src/components/` — shell, tema.
